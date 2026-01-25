@@ -37,4 +37,4 @@ workflows:
         # - APP_STORE_KEY_ID  
         # - APP_STORE_PRIVATE_KEY
         certificate_type: app_store
-        bundle_identifier: com.prirodaspa.app
+        bundle_identifier: ru.prirodaspa.app

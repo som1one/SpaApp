@@ -21,7 +21,7 @@ if (hasReleaseKeystore) {
 }
 
 android {
-    namespace = "com.prirodaspa.app"
+    namespace = "ru.prirodaspa.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -35,7 +35,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.prirodaspa.app"
+        applicationId = "ru.prirodaspa.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.prirodaspa.app">
+    package="ru.prirodaspa.app">
     <application
         android:label="PRIRODA SPA"
         android:name="${applicationName}"

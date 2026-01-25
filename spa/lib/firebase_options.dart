@@ -42,7 +42,7 @@ class DefaultFirebaseOptions {
     projectId: 'prirodaspa-74540',
     storageBucket: 'prirodaspa-74540.firebasestorage.app',
     iosClientId: '7382336719-nn6c6hpcfkkqk3s1c5i8f9poshiobcnp.apps.googleusercontent.com',
-    iosBundleId: 'com.prirodaspa.app',
+    iosBundleId: 'ru.prirodaspa.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -52,6 +52,6 @@ class DefaultFirebaseOptions {
     projectId: 'prirodaspa-74540',
     storageBucket: 'prirodaspa-74540.firebasestorage.app',
     iosClientId: '7382336719-nn6c6hpcfkkqk3s1c5i8f9poshiobcnp.apps.googleusercontent.com',
-    iosBundleId: 'com.prirodaspa.app',
+    iosBundleId: 'ru.prirodaspa.app',
   );
 }
