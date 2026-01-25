@@ -9,8 +9,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      groups:
-        - app_store_credentials  # Группа с API ключами
+      # groups:
+      #   - app_store_credentials  # Убрали обязательную группу, чтобы работали глобальные переменные
 
     scripts:
       - name: Install deps
