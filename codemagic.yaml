@@ -9,10 +9,38 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      # groups:
-      #   - app_store_credentials  # Убрали обязательную группу, чтобы работали глобальные переменные
+      vars:
+        CM_CERTIFICATE_PASSWORD: $CM_CERTIFICATE_PASSWORD # Пароль должен быть задан в Codemagic UI
 
     scripts:
+      - name: Initialize Keychain
+        script: |
+          keychain initialize
+
+      - name: Import Certificate
+        script: |
+          # Импорт сертификата из корня репозитория (уровень выше working_directory)
+          # Пароль берется из переменной окружения
+          keychain add-certificates \
+            --certificate ../certificate.p12 \
+            --certificate-password "$CM_CERTIFICATE_PASSWORD"
+
+      - name: Install Provisioning Profile
+        script: |
+          # Создаем директорию для профилей
+          PROFILES_DIR=~/Library/MobileDevice/Provisioning\ Profiles
+          mkdir -p "$PROFILES_DIR"
+          
+          # Копируем профиль из корня репозитория
+          cp ../Priroda_Spa.mobileprovision "$PROFILES_DIR/"
+          
+          # Получаем UUID профиля для настройки проекта
+          PROFILE_UUID=$(security cms -D -i ../Priroda_Spa.mobileprovision | grep -A1 UUID | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
+          echo "Using Provisioning Profile UUID: $PROFILE_UUID"
+          
+          # Настраиваем проект Xcode на использование этого профиля
+          xcode-project use-profiles --project ios/Runner.xcodeproj --profile "$PROFILE_UUID"
+
       - name: Install deps
         script: flutter pub get
 
@@ -21,23 +49,17 @@ workflows:
           cd ios
           pod install
 
-      - name: Set up code signing settings
-        script: xcode-project use-profiles
-
-      - name: Build IPA (App Store automatic signing)
-        script: flutter build ipa --release
+      - name: Build IPA (Manual Signing)
+        script: |
+          # Создаем ExportOptions.plist динамически
+          PLIST=ios/ExportOptions.plist
+          
+          # Обновляем (или создаем) ExportOptions.plist
+          # Мы используем 'security cms' чтобы узнать имя профиля, или просто полагаемся на automatic detection xcodebuild'а при ручной настройке
+          # Но лучше всего просто не передавать export-options-plist если мы настроили проект через xcode-project
+          
+          flutter build ipa --release \
+            --export-options-plist=$PLIST
 
     artifacts:
       - build/ios/ipa/*.ipa
-    
-    # Автоматическая подпись через App Store Connect API
-    # Codemagic автоматически создаст сертификаты используя переменные из app_store_credentials
-    code_signing:
-      ios:
-        # Используем автоматическую подпись через App Store Connect API
-        # Переменные должны быть в группе app_store_credentials:
-        # - APP_STORE_ISSUER_ID
-        # - APP_STORE_KEY_ID  
-        # - APP_STORE_PRIVATE_KEY
-        certificate_type: app_store
-        bundle_identifier: ru.prirodaspa.app
