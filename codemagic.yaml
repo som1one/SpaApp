@@ -21,6 +21,9 @@ workflows:
           cd ios
           pod install
 
+      - name: Set up code signing settings
+        script: xcode-project use-profiles
+
       - name: Build IPA (App Store automatic signing)
         script: flutter build ipa --release
 
