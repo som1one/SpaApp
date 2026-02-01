@@ -41,9 +41,15 @@ workflows:
 
       - name: Import Certificate
         script: |
+          # Пробуем проверить p12 перед импортом
+          echo "🔍 Verifying P12 integrity..."
+          # Проверяем, подходит ли пароль 12345
+          openssl pkcs12 -info -in ../certificate.p12 -passin pass:12345 -noout || echo "❌ OpenSSL check failed! Wrong password or corrupted file."
+
+          echo "🔑 Importing certificate..."
           keychain add-certificates \
             --certificate ../certificate.p12 \
-            --certificate-password "$CM_CERTIFICATE_PASSWORD"
+            --certificate-password "12345"
 
       - name: Prepare Signing & Build
         script: |
