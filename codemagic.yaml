@@ -125,6 +125,9 @@ workflows:
 
           # 5. Build Archive (Direct xcodebuild)
           echo "🚀 Starting Archive..."
+          # УБИРАЕМ PROVISIONING_PROFILE_SPECIFIER из аргументов, чтобы не ломать Pods!
+          # Xcode сам найдет профиль, так как мы его установили в ~/Library/...
+          
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
@@ -132,7 +135,6 @@ workflows:
             archive \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$UUID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             PRODUCT_BUNDLE_IDENTIFIER="ru.prirodaspa.app" \
             -allowProvisioningUpdates
