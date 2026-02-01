@@ -18,8 +18,18 @@ workflows:
         script: |
           echo "🔓 Decoding secrets..."
           # Декодируем сертификат и профиль из переменных окружения
-          echo $CM_CERTIFICATE | base64 --decode > ../certificate.p12
-          echo $CM_PROVISIONING_PROFILE | base64 --decode > ../profile.mobileprovision
+          # Используем base64 --decode (Linux/standard)
+          echo "$CM_CERTIFICATE" | base64 --decode > ../certificate.p12
+          echo "$CM_PROVISIONING_PROFILE" | base64 --decode > ../profile.mobileprovision
+          
+          echo "📊 File sizes:"
+          ls -l ../certificate.p12
+          ls -l ../profile.mobileprovision
+          
+          if [ ! -s "../certificate.p12" ]; then
+             echo "❌ Error: certificate.p12 is empty! Check CM_CERTIFICATE variable."
+             exit 1
+          fi
           
           echo "✅ Secrets decoded to ../certificate.p12 and ../profile.mobileprovision"
 
