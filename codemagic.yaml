@@ -53,12 +53,7 @@ workflows:
 
       - name: Prepare Signing & Build
         script: |
-          # 1. Install Provisioning Profile
-          PROFILES_DIR=$HOME/Library/MobileDevice/Provisioning\ Profiles
-          mkdir -p "$PROFILES_DIR"
-          cp ../profile.mobileprovision "$PROFILES_DIR/"
-          
-          # 2. Extract Data from Profile
+          # 1. Extract Data from Profile (Сначала извлекаем данные!)
           PROFILE_PATH="../profile.mobileprovision"
           
           # Извлекаем UUID, Team ID и Имя профиля
@@ -66,11 +61,17 @@ workflows:
           TEAM_ID=$(security cms -D -i "$PROFILE_PATH" | grep -A2 TeamIdentifier | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
           PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | grep -A1 Name | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
           
-          echo "✅ Using Profile: $PROFILE_NAME"
           echo "✅ UUID: $UUID"
+          echo "✅ Using Profile: $PROFILE_NAME"
           echo "✅ Team ID: $TEAM_ID"
 
           if [ -z "$UUID" ]; then echo "❌ UUID is empty"; exit 1; fi
+
+          # 2. Install Provisioning Profile (Теперь копируем с именем UUID!)
+          PROFILES_DIR=$HOME/Library/MobileDevice/Provisioning\ Profiles
+          mkdir -p "$PROFILES_DIR"
+          cp "$PROFILE_PATH" "$PROFILES_DIR/$UUID.mobileprovision"
+          echo "✅ Installed profile to $PROFILES_DIR/$UUID.mobileprovision"
 
           # 3. Generate ExportOptions.plist dynamically
           cat > ios/ExportOptions.plist <<EOF
@@ -79,7 +80,7 @@ workflows:
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store-connect</string>
+            <string>app-store</string>
             <key>teamID</key>
             <string>$TEAM_ID</string>
             <key>signingStyle</key>
