@@ -11,8 +11,18 @@ workflows:
       cocoapods: default
       vars:
         CM_CERTIFICATE_PASSWORD: $CM_CERTIFICATE_PASSWORD
+        # CM_CERTIFICATE и CM_PROVISIONING_PROFILE берутся из Environment variables
 
     scripts:
+      - name: Decode Secrets
+        script: |
+          echo "🔓 Decoding secrets..."
+          # Декодируем сертификат и профиль из переменных окружения
+          echo $CM_CERTIFICATE | base64 --decode > ../certificate.p12
+          echo $CM_PROVISIONING_PROFILE | base64 --decode > ../profile.mobileprovision
+          
+          echo "✅ Secrets decoded to ../certificate.p12 and ../profile.mobileprovision"
+
       - name: Initialize Keychain
         script: |
           keychain initialize
@@ -28,20 +38,23 @@ workflows:
           # 1. Install Provisioning Profile
           PROFILES_DIR=$HOME/Library/MobileDevice/Provisioning\ Profiles
           mkdir -p "$PROFILES_DIR"
-          cp ../Priroda_Spa.mobileprovision "$PROFILES_DIR/"
+          cp ../profile.mobileprovision "$PROFILES_DIR/"
           
-          # 2. Extract Data
-          PROFILE_PATH="../Priroda_Spa.mobileprovision"
+          # 2. Extract Data from Profile
+          PROFILE_PATH="../profile.mobileprovision"
+          
+          # Извлекаем UUID, Team ID и Имя профиля
           UUID=$(security cms -D -i "$PROFILE_PATH" | grep -A1 UUID | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
           TEAM_ID=$(security cms -D -i "$PROFILE_PATH" | grep -A2 TeamIdentifier | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
           PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | grep -A1 Name | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
           
-          echo "✅ Using Profile: $PROFILE_NAME ($UUID)"
+          echo "✅ Using Profile: $PROFILE_NAME"
+          echo "✅ UUID: $UUID"
           echo "✅ Team ID: $TEAM_ID"
 
           if [ -z "$UUID" ]; then echo "❌ UUID is empty"; exit 1; fi
 
-          # 3. Generate ExportOptions.plist
+          # 3. Generate ExportOptions.plist dynamically
           cat > ios/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -69,7 +82,6 @@ workflows:
           cd ..
 
           # 5. Build Archive (Direct xcodebuild)
-          # Используем прямую команду xcodebuild для жесткого контроля подписи
           echo "🚀 Starting Archive..."
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
