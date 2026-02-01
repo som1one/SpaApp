@@ -80,7 +80,7 @@ workflows:
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
+            <string>app-store-connect</string>
             <key>teamID</key>
             <string>$TEAM_ID</string>
             <key>signingStyle</key>
@@ -88,7 +88,7 @@ workflows:
             <key>provisioningProfiles</key>
             <dict>
               <key>ru.prirodaspa.app</key>
-              <string>$PROFILE_NAME</string>
+              <string>$UUID</string>
             </dict>
           </dict>
           </plist>
@@ -166,6 +166,9 @@ workflows:
             -allowProvisioningUpdates
 
           # 6. Export IPA
+          echo "🔍 Checking identities before export..."
+          security find-identity -v -p codesigning
+
           echo "🚀 Exporting IPA..."
           xcodebuild -exportArchive \
             -archivePath build/ios/Runner.xcarchive \
