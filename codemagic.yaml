@@ -79,7 +79,7 @@ workflows:
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
+            <string>app-store-connect</string>
             <key>teamID</key>
             <string>$TEAM_ID</string>
             <key>signingStyle</key>
@@ -92,6 +92,9 @@ workflows:
           </dict>
           </plist>
           EOF
+          
+          echo "📄 ExportOptions.plist content:"
+          cat ios/ExportOptions.plist
 
           # 4. Install Dependencies
           flutter pub get
