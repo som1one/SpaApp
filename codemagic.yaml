@@ -9,6 +9,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - 1
       vars:
         CM_CERTIFICATE_PASSWORD: $CM_CERTIFICATE_PASSWORD
         # CM_CERTIFICATE и CM_PROVISIONING_PROFILE берутся из Environment variables
