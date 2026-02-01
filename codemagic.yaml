@@ -123,25 +123,41 @@ workflows:
           pod install
           cd ..
 
-          # 5. Build Archive (using xcconfig override)
-          # Создаем файл конфигурации, чтобы передать параметры подписи ТОЛЬКО в Runner (косвенно)
-          # или просто переопределить их корректно.
+          # 5. Build Archive (using Ruby script to patch project)
+          # Это самый надежный способ: меняем настройки ТОЛЬКО для Runner через Ruby gem xcodeproj
           
-          echo "📝 Creating ios/overrides.xcconfig..."
-          cat > ios/overrides.xcconfig <<EOF
-          CODE_SIGN_STYLE = Manual
-          PROVISIONING_PROFILE_SPECIFIER = $UUID
-          DEVELOPMENT_TEAM = $TEAM_ID
-          CODE_SIGN_IDENTITY = iPhone Distribution
-          PRODUCT_BUNDLE_IDENTIFIER = ru.prirodaspa.app
-          EOF
+          echo "🔧 Patching Xcode project using Ruby..."
+          # Сначала установим гем, если его вдруг нет (обычно есть)
+          gem install xcodeproj
           
+          ruby -e "
+            require 'xcodeproj'
+            project_path = 'ios/Runner.xcodeproj'
+            project = Xcodeproj::Project.open(project_path)
+            
+            # Находим таргет Runner
+            target = project.targets.find { |t| t.name == 'Runner' }
+            
+            # Обновляем настройки для Release
+            target.build_configurations.each do |config|
+              if config.name == 'Release'
+                config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+                config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = '$UUID'
+                config.build_settings['DEVELOPMENT_TEAM'] = '$TEAM_ID'
+                config.build_settings['CODE_SIGN_IDENTITY'] = 'iPhone Distribution'
+                config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'ru.prirodaspa.app'
+                puts '✅ Updated Release config for Runner'
+              end
+            end
+            
+            project.save
+          "
+
           echo "🚀 Starting Archive..."
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
             -archivePath build/ios/Runner.xcarchive \
-            -xcconfig ios/overrides.xcconfig \
             archive \
             -allowProvisioningUpdates
 
