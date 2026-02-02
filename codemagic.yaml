@@ -161,8 +161,44 @@ workflows:
           # --- 8. PUBLISH TO APP STORE ---
           echo "🚀 Publishing to App Store Connect..."
           
-          # Prepare API Key File
-          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > ../AuthKey.p8
+          # Prepare API Key File safely using Python
+          # This handles both Base64 encoded and raw PEM keys
+          python3 -c "
+          import os
+          import base64
+          
+          key = os.environ.get('APP_STORE_PRIVATE_KEY', '').strip()
+          path = '../AuthKey.p8'
+          
+          try:
+              # Try decoding as base64 first
+              if 'BEGIN PRIVATE KEY' not in key:
+                  decoded = base64.b64decode(key).decode('utf-8')
+                  print('✅ Detected Base64 key, decoded successfully.')
+                  content = decoded
+              else:
+                  print('ℹ️ Detected raw PEM key, using as is.')
+                  content = key
+                  
+              with open(path, 'w') as f:
+                  f.write(content)
+                  if not content.endswith('\n'):
+                      f.write('\n') # Ensure newline at EOF
+                      
+          except Exception as e:
+              print(f'❌ Error processing key: {e}')
+              # Fallback: write raw content just in case
+              with open(path, 'w') as f:
+                  f.write(key)
+          "
+          
+          # Check if key looks valid (starts with -----)
+          if grep -q "BEGIN PRIVATE KEY" ../AuthKey.p8; then
+             echo "✅ AuthKey.p8 looks like a valid PEM file."
+          else
+             echo "⚠️ AuthKey.p8 does not look like a PEM file. Printing first line for debug:"
+             head -n 1 ../AuthKey.p8
+          fi
           
           IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
           
