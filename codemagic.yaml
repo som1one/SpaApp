@@ -161,21 +161,26 @@ workflows:
           # --- 8. PUBLISH TO APP STORE ---
           echo "🚀 Publishing to App Store Connect..."
           
-          # Prepare API Key File safely using Python
-          # This handles both Base64 encoded and raw PEM keys
+          # Prepare API Key File in the standard location for altool
+          # altool looks in ~/private_keys/
+          mkdir -p ~/private_keys
+          KEY_FILE="$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8"
+          
+          echo "🔑 Preparing API Key at $KEY_FILE"
+          
+          # Use Python to decode/write the key safely
           python3 -c "
           import os
           import base64
           
           key = os.environ.get('APP_STORE_PRIVATE_KEY', '').strip()
-          path = '../AuthKey.p8'
+          path = '$KEY_FILE'
           
           try:
-              # Try decoding as base64 first
+              content = ''
               if 'BEGIN PRIVATE KEY' not in key:
-                  decoded = base64.b64decode(key).decode('utf-8')
+                  content = base64.b64decode(key).decode('utf-8')
                   print('✅ Detected Base64 key, decoded successfully.')
-                  content = decoded
               else:
                   print('ℹ️ Detected raw PEM key, using as is.')
                   content = key
@@ -183,22 +188,12 @@ workflows:
               with open(path, 'w') as f:
                   f.write(content)
                   if not content.endswith('\n'):
-                      f.write('\n') # Ensure newline at EOF
+                      f.write('\n')
                       
           except Exception as e:
               print(f'❌ Error processing key: {e}')
-              # Fallback: write raw content just in case
-              with open(path, 'w') as f:
-                  f.write(key)
+              exit(1)
           "
-          
-          # Check if key looks valid (starts with -----)
-          if grep -q "BEGIN PRIVATE KEY" ../AuthKey.p8; then
-             echo "✅ AuthKey.p8 looks like a valid PEM file."
-          else
-             echo "⚠️ AuthKey.p8 does not look like a PEM file. Printing first line for debug:"
-             head -n 1 ../AuthKey.p8
-          fi
           
           IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
           
@@ -207,13 +202,25 @@ workflows:
             exit 1
           fi
           
-          echo "📦 Publishing $IPA_PATH"
+          echo "📦 Validating and Uploading $IPA_PATH using altool..."
           
-          app-store-connect publish \
-            --path "$IPA_PATH" \
-            --key-id "$APP_STORE_KEY_ID" \
-            --issuer-id "$APP_STORE_ISSUER_ID" \
-            --private-key "@file:../AuthKey.p8"
+          # 1. Validate
+          echo "🔍 Validating IPA..."
+          xcrun altool --validate-app \
+            -f "$IPA_PATH" \
+            -t ios \
+            --apiKey "$APP_STORE_KEY_ID" \
+            --apiIssuer "$APP_STORE_ISSUER_ID" \
+            --verbose
+            
+          # 2. Upload
+          echo "Vk Uploading IPA..."
+          xcrun altool --upload-app \
+            -f "$IPA_PATH" \
+            -t ios \
+            --apiKey "$APP_STORE_KEY_ID" \
+            --apiIssuer "$APP_STORE_ISSUER_ID" \
+            --verbose
 
     artifacts:
       - build/ios/ipa/*.ipa
