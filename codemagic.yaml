@@ -12,15 +12,19 @@ workflows:
       groups:
         - "1"
       vars:
-        CM_CERTIFICATE_PASSWORD: $CM_CERTIFICATE_PASSWORD
-        # CM_CERTIFICATE и CM_PROVISIONING_PROFILE берутся из Environment variables
+        CM_CERTIFICATE_PASSWORD: "12345" # Hardcoded for debugging
+        # CM_CERTIFICATE and CM_PROVISIONING_PROFILE are environment variables
 
     scripts:
-      - name: Decode Secrets
+      - name: Full Build & Publish Cycle
         script: |
+          set -e # Exit immediately if a command exits with a non-zero status
+          set -x # Print commands for debugging
+
+          echo "🚀 STARTING FULL BUILD CYCLE"
+
+          # --- 1. DECODE SECRETS ---
           echo "🔓 Decoding secrets..."
-          # Декодируем сертификат и профиль из переменных окружения
-          # Используем base64 --decode (Linux/standard)
           echo "$CM_CERTIFICATE" | base64 --decode > ../certificate.p12
           echo "$CM_PROVISIONING_PROFILE" | base64 --decode > ../profile.mobileprovision
           
@@ -29,74 +33,50 @@ workflows:
           ls -l ../profile.mobileprovision
           
           if [ ! -s "../certificate.p12" ]; then
-             echo "❌ Error: certificate.p12 is empty! Check CM_CERTIFICATE variable."
+             echo "❌ Error: certificate.p12 is empty!"
              exit 1
           fi
           
-          echo "✅ Secrets decoded to ../certificate.p12 and ../profile.mobileprovision"
-
-      - name: Initialize Keychain
-        script: |
+          # --- 2. INITIALIZE KEYCHAIN ---
+          echo "🔐 Initializing Keychain..."
           keychain initialize
 
-      - name: Import Certificate
-        script: |
-          # Пробуем проверить p12 перед импортом
-          echo "🔍 Verifying P12 integrity..."
-          # Проверяем, подходит ли пароль 12345
-          openssl pkcs12 -info -in ../certificate.p12 -passin pass:12345 -noout || echo "❌ OpenSSL check failed! Wrong password or corrupted file."
-
+          # --- 3. IMPORT CERTIFICATE ---
           echo "🔑 Importing certificate..."
+          # Verify integrity first
+          openssl pkcs12 -info -in ../certificate.p12 -passin pass:12345 -noout || echo "⚠️ P12 check warning"
+          
           keychain add-certificates \
             --certificate ../certificate.p12 \
             --certificate-password "12345"
 
-      - name: Prepare Signing & Build
-        script: |
-          set -e # Exit immediately if a command exits with a non-zero status
-          set -x # Print commands and their arguments as they are executed
+          # --- 4. PREPARE SIGNING ---
+          echo "📝 Preparing Signing Configuration..."
           
-          # 0. Prepare App Store Connect API Key
-          echo "🔑 Preparing App Store Connect API Key..."
-          # Декодируем base64 ключ в файл
-          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > ../AuthKey.p8
-          
-          # Проверяем, что файл создался
-          if [ -s "../AuthKey.p8" ]; then
-             echo "✅ AuthKey.p8 created successfully."
-          else
-             echo "❌ Failed to create AuthKey.p8. Check APP_STORE_PRIVATE_KEY variable."
-             exit 1
-          fi
-
-          # 1. Extract Data from Profile (Сначала извлекаем данные!)
+          # Extract Data from Profile
           PROFILE_PATH="../profile.mobileprovision"
-          
-          # Извлекаем UUID, Team ID и Имя профиля
           UUID=$(security cms -D -i "$PROFILE_PATH" | grep -A1 UUID | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
           TEAM_ID=$(security cms -D -i "$PROFILE_PATH" | grep -A2 TeamIdentifier | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
-          PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | grep -A1 Name | tail -n1 | cut -d'>' -f2 | cut -d'<' -f1)
           
           echo "✅ UUID: $UUID"
-          echo "✅ Using Profile: $PROFILE_NAME"
           echo "✅ Team ID: $TEAM_ID"
 
           if [ -z "$UUID" ]; then echo "❌ UUID is empty"; exit 1; fi
 
-          # 2. Install Provisioning Profile (Теперь копируем с именем UUID!)
+          # Install Provisioning Profile
           PROFILES_DIR=$HOME/Library/MobileDevice/Provisioning\ Profiles
           mkdir -p "$PROFILES_DIR"
           cp "$PROFILE_PATH" "$PROFILES_DIR/$UUID.mobileprovision"
           echo "✅ Installed profile to $PROFILES_DIR/$UUID.mobileprovision"
 
-          # 3. Generate ExportOptions.plist dynamically
+          # Generate ExportOptions.plist
           cat > ios/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store-connect</string>
+            <string>app-store</string>
             <key>teamID</key>
             <string>$TEAM_ID</string>
             <key>signingStyle</key>
@@ -109,22 +89,14 @@ workflows:
           </dict>
           </plist>
           EOF
-          
-          echo "📄 ExportOptions.plist content:"
-          cat ios/ExportOptions.plist
 
-          # 4. Install Dependencies
+          # --- 5. PREPARE DEPENDENCIES ---
+          echo "📦 Installing Dependencies..."
           flutter pub get
           cd ios
-          
-          # Генерируем Podfile (если его нет) через flutter build ios --config-only или просто pod install
-          # Но лучше дать flutter сделать свое дело
-          
-          # Пытаемся запустить pod install, чтобы появился Podfile
           pod install --repo-update || true
           
-          echo "🔧 Patching Podfile to disable signing for Pods..."
-          # Дописываем скрипт отключения подписи
+          # Patch Podfile
           cat >> Podfile <<EOF
 
           post_install do |installer|
@@ -139,26 +111,18 @@ workflows:
           end
           EOF
           
-          echo "✅ Podfile patched. Running pod install again..."
           pod install
           cd ..
 
-          # 5. Build Archive (using Ruby script to patch project)
-          # Это самый надежный способ: меняем настройки ТОЛЬКО для Runner через Ruby gem xcodeproj
+          # --- 6. BUILD ARCHIVE ---
+          echo "🏗 Building Archive..."
           
-          echo "🔧 Patching Xcode project using Ruby..."
-          # Сначала установим гем, если его вдруг нет (обычно есть)
+          # Patch Xcode Project
           gem install xcodeproj
-          
           ruby -e "
             require 'xcodeproj'
-            project_path = 'ios/Runner.xcodeproj'
-            project = Xcodeproj::Project.open(project_path)
-            
-            # Находим таргет Runner
+            project = Xcodeproj::Project.open('ios/Runner.xcodeproj')
             target = project.targets.find { |t| t.name == 'Runner' }
-            
-            # Обновляем настройки для Release
             target.build_configurations.each do |config|
               if config.name == 'Release'
                 config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
@@ -166,14 +130,11 @@ workflows:
                 config.build_settings['DEVELOPMENT_TEAM'] = '$TEAM_ID'
                 config.build_settings['CODE_SIGN_IDENTITY'] = 'iPhone Distribution'
                 config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'ru.prirodaspa.app'
-                puts '✅ Updated Release config for Runner'
               end
             end
-            
             project.save
           "
 
-          echo "🚀 Starting Archive..."
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
@@ -181,44 +142,33 @@ workflows:
             archive \
             -allowProvisioningUpdates
 
-          # 6. Export IPA
-          echo "🔍 Checking identities before export..."
-          security find-identity -v -p codesigning
-
-          echo "🚀 Exporting IPA..."
+          # --- 7. EXPORT IPA ---
+          echo "📦 Exporting IPA..."
           xcodebuild -exportArchive \
             -archivePath build/ios/Runner.xcarchive \
             -exportPath build/ios/ipa \
             -exportOptionsPlist ios/ExportOptions.plist
 
-    artifacts:
-      - build/ios/ipa/*.ipa
-
-    scripts:
-      - name: Publish to App Store Connect
-        script: |
+          # --- 8. PUBLISH TO APP STORE ---
           echo "🚀 Publishing to App Store Connect..."
           
-          # Ищем IPA файл везде в папке build, так надежнее
-          IPA_PATH=$(find . -name "*.ipa" | head -n 1)
+          # Prepare API Key File
+          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > ../AuthKey.p8
+          
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
           
           if [ -z "$IPA_PATH" ]; then
-            echo "❌ No IPA file found in the entire project directory!"
-            echo "📂 Listing build directory structure:"
-            find build -maxdepth 4 || echo "Build directory not found"
+            echo "❌ No IPA file found!"
             exit 1
           fi
           
-          echo "📦 Found IPA: $IPA_PATH"
-          echo "🔑 Using Key ID: $APP_STORE_KEY_ID"
-          echo "🔑 Using Issuer ID: $APP_STORE_ISSUER_ID"
-          echo "🔑 Using Private Key File: ../AuthKey.p8"
+          echo "📦 Publishing $IPA_PATH"
           
-          # Явно используем файл ключа, чтобы избежать подстановки переменных
           app-store-connect publish \
             --path "$IPA_PATH" \
             --key-id "$APP_STORE_KEY_ID" \
             --issuer-id "$APP_STORE_ISSUER_ID" \
             --private-key "@file:../AuthKey.p8"
 
-
+    artifacts:
+      - build/ios/ipa/*.ipa
