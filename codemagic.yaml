@@ -53,6 +53,19 @@ workflows:
 
       - name: Prepare Signing & Build
         script: |
+          # 0. Prepare App Store Connect API Key
+          echo "🔑 Preparing App Store Connect API Key..."
+          # Декодируем base64 ключ в файл
+          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > ../AuthKey.p8
+          
+          # Проверяем, что файл создался
+          if [ -s "../AuthKey.p8" ]; then
+             echo "✅ AuthKey.p8 created successfully."
+          else
+             echo "❌ Failed to create AuthKey.p8. Check APP_STORE_PRIVATE_KEY variable."
+             exit 1
+          fi
+
           # 1. Extract Data from Profile (Сначала извлекаем данные!)
           PROFILE_PATH="../profile.mobileprovision"
           
@@ -180,7 +193,7 @@ workflows:
 
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_PRIVATE_KEY
+        api_key: @file:../AuthKey.p8
         key_id: $APP_STORE_KEY_ID
         issuer_id: $APP_STORE_ISSUER_ID
         submit_to_testflight: true
