@@ -191,10 +191,27 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
 
-    publishing:
-      app_store_connect:
-        api_key: "@file:../AuthKey.p8"
-        key_id: $APP_STORE_KEY_ID
-        issuer_id: $APP_STORE_ISSUER_ID
-        submit_to_testflight: true
+    scripts:
+      - name: Publish to App Store Connect
+        script: |
+          echo "🚀 Publishing to App Store Connect..."
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+          
+          if [ -z "$IPA_PATH" ]; then
+            echo "❌ No IPA file found!"
+            exit 1
+          fi
+          
+          echo "📦 Found IPA: $IPA_PATH"
+          echo "🔑 Using Key ID: $APP_STORE_KEY_ID"
+          echo "🔑 Using Issuer ID: $APP_STORE_ISSUER_ID"
+          echo "🔑 Using Private Key File: ../AuthKey.p8"
+          
+          # Явно используем файл ключа, чтобы избежать подстановки переменных
+          app-store-connect publish \
+            --path "$IPA_PATH" \
+            --key-id "$APP_STORE_KEY_ID" \
+            --issuer-id "$APP_STORE_ISSUER_ID" \
+            --private-key "@file:../AuthKey.p8"
+
 
