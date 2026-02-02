@@ -193,7 +193,7 @@ workflows:
 
     publishing:
       app_store_connect:
-        api_key: @file:../AuthKey.p8
+        api_key: "@file:../AuthKey.p8"
         key_id: $APP_STORE_KEY_ID
         issuer_id: $APP_STORE_ISSUER_ID
         submit_to_testflight: true
