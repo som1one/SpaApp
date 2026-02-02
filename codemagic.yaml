@@ -195,10 +195,14 @@ workflows:
       - name: Publish to App Store Connect
         script: |
           echo "🚀 Publishing to App Store Connect..."
-          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+          
+          # Ищем IPA файл везде в папке build, так надежнее
+          IPA_PATH=$(find . -name "*.ipa" | head -n 1)
           
           if [ -z "$IPA_PATH" ]; then
-            echo "❌ No IPA file found!"
+            echo "❌ No IPA file found in the entire project directory!"
+            echo "📂 Listing build directory structure:"
+            find build -maxdepth 4 || echo "Build directory not found"
             exit 1
           fi
           
