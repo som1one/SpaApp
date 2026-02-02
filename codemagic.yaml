@@ -53,6 +53,9 @@ workflows:
 
       - name: Prepare Signing & Build
         script: |
+          set -e # Exit immediately if a command exits with a non-zero status
+          set -x # Print commands and their arguments as they are executed
+          
           # 0. Prepare App Store Connect API Key
           echo "🔑 Preparing App Store Connect API Key..."
           # Декодируем base64 ключ в файл
