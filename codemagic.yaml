@@ -248,27 +248,71 @@ workflows:
           echo "✅ APP_STORE_KEY_ID: $APP_STORE_KEY_ID"
           echo "✅ APP_STORE_ISSUER_ID: $APP_STORE_ISSUER_ID"
           
-          echo "📦 Validating and Uploading $IPA_PATH using altool..."
+          echo "📦 Uploading $IPA_PATH to App Store Connect..."
           
-          # 1. Validate (skip if app doesn't exist yet - it will be created on upload)
-          echo "🔍 Validating IPA..."
-          xcrun altool --validate-app \
-            -f "$IPA_PATH" \
-            -t ios \
-            --apiKey "$APP_STORE_KEY_ID" \
-            --apiIssuer "$APP_STORE_ISSUER_ID" \
-            --output-format xml \
-            --verbose || echo "⚠️ Validation failed, but continuing with upload..."
-            
-          # 2. Upload (this will create the app if it doesn't exist)
-          echo "🚀 Uploading IPA to App Store Connect..."
+          # IMPORTANT: The app MUST exist in App Store Connect first!
+          # If you see "Failed to determine the Apple ID from Bundle ID", 
+          # it means the app doesn't exist yet.
+          # 
+          # Solution: Go to App Store Connect and create the app manually,
+          # OR use the workaround below to skip validation
+          
+          # Try upload (skip validation - it often fails even when upload works)
+          echo "🚀 Uploading IPA (skipping validation due to altool limitations)..."
+          
+          # Upload directly - altool will create the app if it doesn't exist
+          # but only if the API key has proper permissions
           xcrun altool --upload-app \
             -f "$IPA_PATH" \
             -t ios \
             --apiKey "$APP_STORE_KEY_ID" \
             --apiIssuer "$APP_STORE_ISSUER_ID" \
-            --output-format xml \
-            --verbose
+            --verbose 2>&1 | tee /tmp/upload.log || {
+              
+              echo "❌ Upload failed. Checking error details..."
+              cat /tmp/upload.log
+              
+              # Check if it's the "app doesn't exist" error
+              if grep -q "Failed to determine the Apple ID" /tmp/upload.log; then
+                echo ""
+                echo "⚠️  ERROR: App with Bundle ID 'ru.prirodaspa.app' not found in App Store Connect!"
+                echo ""
+                echo "📋 SOLUTION:"
+                echo "1. Go to https://appstoreconnect.apple.com"
+                echo "2. Click 'My Apps' -> '+' -> 'New App'"
+                echo "3. Fill in:"
+                echo "   - Platform: iOS"
+                echo "   - Name: PRIRODA SPA (or any name)"
+                echo "   - Primary Language: Russian"
+                echo "   - Bundle ID: ru.prirodaspa.app"
+                echo "   - SKU: prirodaspa-ios (or any unique ID)"
+                echo "4. Click 'Create'"
+                echo "5. Run this build again"
+                echo ""
+                exit 1
+              fi
+              
+              # Check if it's an API key permission error
+              if grep -q "CryptoKit" /tmp/upload.log; then
+                echo ""
+                echo "⚠️  ERROR: API Key authentication failed!"
+                echo ""
+                echo "📋 SOLUTION:"
+                echo "1. Go to https://developer.apple.com/account/resources/authkeys/list"
+                echo "2. Find key with ID: $APP_STORE_KEY_ID"
+                echo "3. Ensure it has 'App Manager' or 'Admin' role"
+                echo "4. If not, create a new key with proper permissions"
+                echo "5. Update CM_APP_STORE_KEY_ID in Codemagic"
+                echo ""
+                exit 1
+              fi
+              
+              exit 1
+            }
+          
+          echo "✅ Upload completed successfully!"
+          echo "⏳ Processing usually takes 10-30 minutes"
+          echo "📱 Check App Store Connect -> TestFlight after processing"
 
     artifacts:
       - build/ios/ipa/*.ipa
