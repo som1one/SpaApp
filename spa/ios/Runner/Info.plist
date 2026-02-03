@@ -68,5 +68,11 @@
 	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Приложению необходим доступ к фотогалерее для выбора изображений.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Приложению необходим доступ к камере для создания снимков.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Приложению необходим доступ к микрофону для записи видео со звуком.</string>
 </dict>
 </plist>
