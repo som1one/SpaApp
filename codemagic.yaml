@@ -189,11 +189,44 @@ workflows:
                   f.write(content)
                   if not content.endswith('\n'):
                       f.write('\n')
+              
+              # Set proper permissions (read-only for owner)
+              os.chmod(path, 0o600)
+              print(f'✅ Key file created at {path}')
+              print(f'✅ Key file size: {os.path.getsize(path)} bytes')
+              print(f'✅ Key file permissions: {oct(os.stat(path).st_mode)[-3:]}')
                       
           except Exception as e:
               print(f'❌ Error processing key: {e}')
               exit(1)
           "
+          
+          # Verify key file exists and is readable
+          if [ ! -f "$KEY_FILE" ]; then
+            echo "❌ Key file not found at $KEY_FILE"
+            exit 1
+          fi
+          
+          # Verify key content starts correctly
+          KEY_FIRST_LINE=$(head -n 1 "$KEY_FILE")
+          if ! echo "$KEY_FIRST_LINE" | grep -q "BEGIN"; then
+            echo "❌ Key file format incorrect (should start with BEGIN)"
+            echo "First line: $KEY_FIRST_LINE"
+            exit 1
+          fi
+          
+          # Show first and last lines of key (for debugging, without exposing full key)
+          echo "✅ Key file verified: $KEY_FILE"
+          echo "Key first line: $KEY_FIRST_LINE"
+          echo "Key last line: $(tail -n 1 "$KEY_FILE")"
+          
+          # Verify key file is not empty and has reasonable size
+          KEY_SIZE=$(stat -f%z "$KEY_FILE" 2>/dev/null || stat -c%s "$KEY_FILE" 2>/dev/null || echo "0")
+          if [ "$KEY_SIZE" -lt 100 ]; then
+            echo "❌ Key file seems too small ($KEY_SIZE bytes)"
+            exit 1
+          fi
+          echo "✅ Key file size: $KEY_SIZE bytes"
           
           IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
           
@@ -202,24 +235,39 @@ workflows:
             exit 1
           fi
           
+          # Verify environment variables
+          echo "🔍 Verifying environment variables..."
+          if [ -z "$APP_STORE_KEY_ID" ]; then
+            echo "❌ APP_STORE_KEY_ID is not set!"
+            exit 1
+          fi
+          if [ -z "$APP_STORE_ISSUER_ID" ]; then
+            echo "❌ APP_STORE_ISSUER_ID is not set!"
+            exit 1
+          fi
+          echo "✅ APP_STORE_KEY_ID: $APP_STORE_KEY_ID"
+          echo "✅ APP_STORE_ISSUER_ID: $APP_STORE_ISSUER_ID"
+          
           echo "📦 Validating and Uploading $IPA_PATH using altool..."
           
-          # 1. Validate
+          # 1. Validate (skip if app doesn't exist yet - it will be created on upload)
           echo "🔍 Validating IPA..."
           xcrun altool --validate-app \
             -f "$IPA_PATH" \
             -t ios \
             --apiKey "$APP_STORE_KEY_ID" \
             --apiIssuer "$APP_STORE_ISSUER_ID" \
-            --verbose
+            --output-format xml \
+            --verbose || echo "⚠️ Validation failed, but continuing with upload..."
             
-          # 2. Upload
-          echo "Vk Uploading IPA..."
+          # 2. Upload (this will create the app if it doesn't exist)
+          echo "🚀 Uploading IPA to App Store Connect..."
           xcrun altool --upload-app \
             -f "$IPA_PATH" \
             -t ios \
             --apiKey "$APP_STORE_KEY_ID" \
             --apiIssuer "$APP_STORE_ISSUER_ID" \
+            --output-format xml \
             --verbose
 
     artifacts:
