@@ -260,6 +260,25 @@ workflows:
           # Try upload - altool has known issues with API keys, so we'll try multiple approaches
           echo "🚀 Attempting to upload IPA..."
           
+          # Pre-check: Verify API key is accessible
+          echo "🔍 Pre-check: Verifying API key setup..."
+          if [ -z "$APP_STORE_KEY_ID" ] || [ -z "$APP_STORE_ISSUER_ID" ]; then
+            echo "❌ ERROR: APP_STORE_KEY_ID or APP_STORE_ISSUER_ID is not set!"
+            exit 1
+          fi
+          
+          if [ ! -f "$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8" ]; then
+            echo "❌ ERROR: API key file not found: $HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8"
+            exit 1
+          fi
+          
+          echo "✅ API key file found"
+          echo "📦 Bundle ID: ru.prirodaspa.app"
+          echo "⚠️  IMPORTANT: Make sure the app is created in App Store Connect!"
+          echo "   If you see 'Failed to determine Apple ID' error, create the app first:"
+          echo "   https://appstoreconnect.apple.com -> My Apps -> + -> New App"
+          echo ""
+          
           # Method 1: Try altool with API key
           echo "📤 Method 1: Using altool with API key..."
           UPLOAD_LOG=$(mktemp)
@@ -293,19 +312,32 @@ workflows:
             echo "⚠️  ERROR: App with Bundle ID 'ru.prirodaspa.app' NOT FOUND in App Store Connect!"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
-            echo "📋 SOLUTION - Create the app manually:"
+            echo "📌 IMPORTANT: Bundle ID exists in Developer Portal, but app is NOT created in App Store Connect!"
+            echo "   These are TWO DIFFERENT things:"
+            echo "   • Developer Portal = Bundle ID registration (✅ you have this)"
+            echo "   • App Store Connect = App record for publishing (❌ missing!)"
             echo ""
-            echo "1. Go to: https://appstoreconnect.apple.com"
-            echo "2. Click: 'My Apps' → '+' → 'New App'"
-            echo "3. Fill in the form:"
-            echo "   • Platform: iOS"
+            echo "📋 SOLUTION - Create the app in App Store Connect:"
+            echo ""
+            echo "1. Open: https://appstoreconnect.apple.com"
+            echo "2. Click: 'My Apps' (or 'Мои приложения')"
+            echo "3. Check if app 'ru.prirodaspa.app' exists in the list"
+            echo "   → If NO: Click '+' → 'New App' (or 'Новое приложение')"
+            echo "   → If YES: App exists, but there might be another issue"
+            echo ""
+            echo "4. If creating new app, fill in:"
+            echo "   • Platform: iOS (check the box)"
             echo "   • Name: PRIRODA SPA"
-            echo "   • Primary Language: Russian"
-            echo "   • Bundle ID: ru.prirodaspa.app  ← MUST MATCH EXACTLY!"
-            echo "   • SKU: prirodaspa-ios-001  (or any unique identifier)"
-            echo "4. Click 'Create'"
-            echo "5. Wait 1-2 minutes for Apple to process"
-            echo "6. Run this Codemagic build again"
+            echo "   • Primary Language: Russian (or Русский)"
+            echo "   • Bundle ID: Select 'ru.prirodaspa.app' from dropdown"
+            echo "     (If not in list, wait 2-3 minutes and refresh page)"
+            echo "   • SKU: prirodaspa-ios-001"
+            echo "5. Click 'Create' (or 'Создать')"
+            echo "6. Wait 1-2 minutes for Apple to process"
+            echo "7. Run this Codemagic build again"
+            echo ""
+            echo "🔗 Direct link to create app:"
+            echo "   https://appstoreconnect.apple.com/apps/create"
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             exit 1
