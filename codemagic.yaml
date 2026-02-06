@@ -21,6 +21,29 @@ workflows:
           set -x # Print commands for debugging
 
           echo "🚀 STARTING FULL BUILD CYCLE"
+          
+          # --- 0. VERIFY ENVIRONMENT VARIABLES ---
+          echo "🔍 Verifying environment variables..."
+          if [ -z "$APP_STORE_KEY_ID" ]; then
+            echo "❌ ERROR: APP_STORE_KEY_ID is not set in environment!"
+            echo "   Please add it to Codemagic environment variables (group '1')"
+            exit 1
+          fi
+          if [ -z "$APP_STORE_ISSUER_ID" ]; then
+            echo "❌ ERROR: APP_STORE_ISSUER_ID is not set in environment!"
+            echo "   Please add it to Codemagic environment variables (group '1')"
+            exit 1
+          fi
+          if [ -z "$APP_STORE_PRIVATE_KEY" ]; then
+            echo "❌ ERROR: APP_STORE_PRIVATE_KEY is not set in environment!"
+            echo "   Please add it to Codemagic environment variables (group '1')"
+            exit 1
+          fi
+          echo "✅ Environment variables verified:"
+          echo "   APP_STORE_KEY_ID: $APP_STORE_KEY_ID"
+          echo "   APP_STORE_ISSUER_ID: $APP_STORE_ISSUER_ID"
+          echo "   APP_STORE_PRIVATE_KEY: ${#APP_STORE_PRIVATE_KEY} characters"
+          echo ""
 
           # --- 1. DECODE SECRETS ---
           echo "🔓 Decoding secrets..."
@@ -297,7 +320,16 @@ workflows:
           echo "📤 Method 1: Using altool with API key..."
           UPLOAD_LOG=$(mktemp)
           
+          # Debug: Show what we're about to run
+          echo "🔍 Debug info:"
+          echo "   IPA: $IPA_PATH"
+          echo "   Key ID: $APP_STORE_KEY_ID"
+          echo "   Issuer ID: $APP_STORE_ISSUER_ID"
+          echo "   Key file exists: $([ -f "$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8" ] && echo 'YES' || echo 'NO')"
+          echo ""
+          
           # Run altool and capture both exit code and output
+          echo "🚀 Running altool..."
           xcrun altool --upload-app \
             -f "$IPA_PATH" \
             -t ios \
@@ -307,17 +339,27 @@ workflows:
           
           ALTOOL_EXIT_CODE=${PIPESTATUS[0]}
           
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 FULL ALTOOL OUTPUT:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          cat "$UPLOAD_LOG"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Exit code: $ALTOOL_EXIT_CODE"
+          echo ""
+          
           # Check for errors in the log (altool sometimes returns 0 even on errors!)
           HAS_ERROR=false
           if grep -q "ERROR:" "$UPLOAD_LOG" || grep -q "Failed to determine" "$UPLOAD_LOG" || grep -q "CryptoKit" "$UPLOAD_LOG"; then
             HAS_ERROR=true
+            echo "⚠️  Error detected in log!"
           fi
           
           # If exit code is non-zero OR we found errors in log, treat as failure
           if [ "$ALTOOL_EXIT_CODE" -ne 0 ] || [ "$HAS_ERROR" = true ]; then
             echo ""
             echo "❌ Upload failed. Analyzing error..."
-            cat "$UPLOAD_LOG"
           
           # Check error type
           if grep -q "Failed to determine the Apple ID from Bundle ID" "$UPLOAD_LOG"; then
@@ -331,13 +373,26 @@ workflows:
             echo "   • Developer Portal = Bundle ID registration (✅ you have this)"
             echo "   • App Store Connect = App record for publishing (❌ missing!)"
             echo ""
-            echo "📋 SOLUTION - Create the app in App Store Connect:"
+            echo "🔍 DIAGNOSTICS:"
+            echo "   • Key ID used: $APP_STORE_KEY_ID"
+            echo "   • Issuer ID used: $APP_STORE_ISSUER_ID"
+            echo "   • Bundle ID: ru.prirodaspa.app"
+            echo ""
+            echo "💡 POSSIBLE CAUSES:"
+            echo "   1. App doesn't exist in App Store Connect (most likely)"
+            echo "   2. API key doesn't have access to this app"
+            echo "   3. App was created but not yet synced (wait 2-3 minutes)"
+            echo ""
+            echo "📋 SOLUTION - Verify and create the app in App Store Connect:"
             echo ""
             echo "1. Open: https://appstoreconnect.apple.com"
             echo "2. Click: 'My Apps' (or 'Мои приложения')"
             echo "3. Check if app 'ru.prirodaspa.app' exists in the list"
             echo "   → If NO: Click '+' → 'New App' (or 'Новое приложение')"
-            echo "   → If YES: App exists, but there might be another issue"
+            echo "   → If YES: App exists, check API key permissions:"
+            echo "      • Go to: Users and Access → Keys → API App Store Connect"
+            echo "      • Find key ID: $APP_STORE_KEY_ID"
+            echo "      • Ensure it has 'App Manager' or 'Admin' access"
             echo ""
             echo "4. If creating new app, fill in:"
             echo "   • Platform: iOS (check the box)"
