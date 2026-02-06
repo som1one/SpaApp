@@ -40,9 +40,38 @@ workflows:
             exit 1
           fi
           echo "✅ Environment variables verified:"
-          echo "   APP_STORE_KEY_ID: $APP_STORE_KEY_ID"
-          echo "   APP_STORE_ISSUER_ID: $APP_STORE_ISSUER_ID"
-          echo "   APP_STORE_PRIVATE_KEY: ${#APP_STORE_PRIVATE_KEY} characters"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 ENVIRONMENT VARIABLES CHECK:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "🔑 APP_STORE_KEY_ID:"
+          echo "   Value: $APP_STORE_KEY_ID"
+          echo "   Length: ${#APP_STORE_KEY_ID} characters"
+          echo "   Expected: 10 characters (e.g., 2N2LSDXR7U)"
+          echo ""
+          echo "🏢 APP_STORE_ISSUER_ID:"
+          echo "   Value: $APP_STORE_ISSUER_ID"
+          echo "   Length: ${#APP_STORE_ISSUER_ID} characters"
+          echo "   Expected: UUID format (36 characters with dashes)"
+          echo ""
+          echo "🔐 APP_STORE_PRIVATE_KEY:"
+          echo "   Length: ${#APP_STORE_PRIVATE_KEY} characters"
+          echo "   Expected: ~344 characters (Base64 encoded .p8 file)"
+          if [ ${#APP_STORE_PRIVATE_KEY} -gt 20 ]; then
+            echo "   First 20 chars: ${APP_STORE_PRIVATE_KEY:0:20}..."
+            echo "   Last 20 chars: ...${APP_STORE_PRIVATE_KEY: -20}"
+            # Check if it looks like Base64
+            if echo "$APP_STORE_PRIVATE_KEY" | grep -q "^[A-Za-z0-9+/=]"; then
+              echo "   Format: ✅ Looks like Base64"
+            else
+              echo "   Format: ⚠️  Might not be Base64 (should start with A-Z, a-z, 0-9, +, /, or =)"
+            fi
+          else
+            echo "   ⚠️  WARNING: Key seems too short!"
+          fi
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
 
           # --- 1. DECODE SECRETS ---
@@ -232,16 +261,43 @@ workflows:
           
           # Verify key content starts correctly
           KEY_FIRST_LINE=$(head -n 1 "$KEY_FILE")
+          KEY_LAST_LINE=$(tail -n 1 "$KEY_FILE")
+          KEY_LINE_COUNT=$(wc -l < "$KEY_FILE" | tr -d ' ')
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📋 DECODED API KEY VERIFICATION:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📁 Key file path: $KEY_FILE"
+          echo "📏 Key file size: $(stat -f%z "$KEY_FILE" 2>/dev/null || stat -c%s "$KEY_FILE" 2>/dev/null || echo "unknown") bytes"
+          echo "📄 Key file lines: $KEY_LINE_COUNT"
+          echo ""
+          
           if ! echo "$KEY_FIRST_LINE" | grep -q "BEGIN"; then
             echo "❌ Key file format incorrect (should start with BEGIN)"
-            echo "First line: $KEY_FIRST_LINE"
+            echo "   First line: $KEY_FIRST_LINE"
             exit 1
           fi
           
-          # Show first and last lines of key (for debugging, without exposing full key)
-          echo "✅ Key file verified: $KEY_FILE"
-          echo "Key first line: $KEY_FIRST_LINE"
-          echo "Key last line: $(tail -n 1 "$KEY_FILE")"
+          echo "✅ Key file format verified:"
+          echo "   First line: $KEY_FIRST_LINE"
+          echo "   Last line:  $KEY_LAST_LINE"
+          echo ""
+          
+          # Show key ID from filename for verification
+          EXPECTED_KEY_ID=$(basename "$KEY_FILE" | sed 's/AuthKey_\(.*\)\.p8/\1/')
+          echo "🔍 Key ID verification:"
+          echo "   Expected Key ID (from filename): $EXPECTED_KEY_ID"
+          echo "   Environment Key ID: $APP_STORE_KEY_ID"
+          if [ "$EXPECTED_KEY_ID" = "$APP_STORE_KEY_ID" ]; then
+            echo "   Status: ✅ Match"
+          else
+            echo "   Status: ⚠️  Mismatch! Filename doesn't match environment variable"
+          fi
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
           
           # Verify key file is not empty and has reasonable size
           KEY_SIZE=$(stat -f%z "$KEY_FILE" 2>/dev/null || stat -c%s "$KEY_FILE" 2>/dev/null || echo "0")
@@ -321,11 +377,31 @@ workflows:
           UPLOAD_LOG=$(mktemp)
           
           # Debug: Show what we're about to run
-          echo "🔍 Debug info:"
-          echo "   IPA: $IPA_PATH"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 ALTOOL UPLOAD PARAMETERS:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📦 IPA File:"
+          echo "   Path: $IPA_PATH"
+          echo "   Size: $(stat -f%z "$IPA_PATH" 2>/dev/null || stat -c%s "$IPA_PATH" 2>/dev/null || echo "unknown") bytes"
+          echo "   Exists: ✅"
+          echo ""
+          echo "🔑 API Key Configuration:"
           echo "   Key ID: $APP_STORE_KEY_ID"
           echo "   Issuer ID: $APP_STORE_ISSUER_ID"
-          echo "   Key file exists: $([ -f "$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8" ] && echo 'YES' || echo 'NO')"
+          echo "   Key file path: $HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8"
+          echo "   Key file exists: $([ -f "$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8" ] && echo '✅ YES' || echo '❌ NO')"
+          if [ -f "$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8" ]; then
+            KEY_FILE_SIZE=$(stat -f%z "$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8" 2>/dev/null || stat -c%s "$HOME/private_keys/AuthKey_$APP_STORE_KEY_ID.p8" 2>/dev/null || echo "0")
+            echo "   Key file size: $KEY_FILE_SIZE bytes"
+          fi
+          echo ""
+          echo "📱 App Configuration:"
+          echo "   Bundle ID: ru.prirodaspa.app"
+          echo "   Platform: iOS"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           
           # Run altool and capture both exit code and output
