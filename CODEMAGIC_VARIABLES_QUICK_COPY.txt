@@ -1,0 +1,51 @@
+===========================================
+КОПИРУЙ ЭТИ ЗНАЧЕНИЯ В CODEMAGIC
+===========================================
+
+ГРУППА: "1"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. APP_STORE_KEY_ID
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2N2LSDXR7U
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+2. APP_STORE_ISSUER_ID
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4fbfcedf-2756-4b8e-8fc3-b17978e9532a
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3. APP_STORE_PRIVATE_KEY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JR1RBZ0VBTUJNR0J5cUdTTTQ5QWdFR0NDcUdTTTQ5QXdFSEJIa3dkd0lCQVFRZ2c3cE1mU1gwbjBVNlpZWU0KalB5VkdZWUpnVW9TY3lXeVVyVzc4SDAwb0JXZ0NnWUlLb1pJemowREFRZWhSQU5DQUFTRE9yOFZ3M3JhUnZBdgo2WWc0UkFDUW5yQ1hPc25xdVFyaSttYmhqcXBHMlFwYUkwb25YRmw3Qk83VjBEbG9wcTYweGVMQ1paWTRqVzJtCmVWcFRwWUpSCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0=
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ВАЖНО:
+- Вставляй APP_STORE_PRIVATE_KEY ОДНОЙ СТРОКОЙ (без переносов)
+- Не добавляй кавычки
+- Не добавляй пробелы в начале/конце
+
+===========================================
+ПРОВЕРКА:
+===========================================
+
+✅ Key ID: 2N2LSDXR7U
+✅ Issuer ID: 4fbfcedf-2756-4b8e-8fc3-b17978e9532a
+✅ Файл: ios_certs_2026/AuthKey_2N2LSDXR7U.p8
+✅ Bundle ID: ru.prirodaspa.app
+✅ Приложение создано в App Store Connect
+
+===========================================
+СЛЕДУЮЩИЙ ШАГ:
+===========================================
+
+1. Открой Codemagic → Settings → Environment variables
+2. Выбери группу "1"
+3. Добавь/Обнови 3 переменные выше
+4. Запусти билд: iOS Manual Signing 2026
+
+Подробный гайд: CODEMAGIC_APP_STORE_SETUP.md
