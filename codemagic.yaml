@@ -5,6 +5,9 @@
     max_build_duration: 120
     working_directory: spa
 
+    integrations:
+      app_store_connect: appstore  # Имя интеграции из Codemagic → Settings → Integrations
+
     environment:
       flutter: stable
       xcode: latest
@@ -79,24 +82,6 @@
           flutter build ipa --release \
             --export-options-plist=ios/ExportOptions.plist \
             --codesign
-
-      - name: Prepare API key for upload
-        script: |
-          echo "🔑 Подготовка API ключа для загрузки..."
-          
-          # Проверяем переменные
-          if [ -z "$APP_STORE_KEY_ID" ] || [ -z "$APP_STORE_ISSUER_ID" ] || [ -z "$APP_STORE_PRIVATE_KEY" ]; then
-            echo "❌ API ключ не настроен (проверьте переменные)"
-            exit 1
-          fi
-          
-          # Декодируем API ключ из Base64
-          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > /tmp/AuthKey.p8
-          chmod 600 /tmp/AuthKey.p8
-          
-          echo "✅ API ключ подготовлен"
-          echo "📋 Key ID: $APP_STORE_KEY_ID"
-          echo "📋 Issuer ID: $APP_STORE_ISSUER_ID"
 
     artifacts:
       - build/ios/ipa/*.ipa
