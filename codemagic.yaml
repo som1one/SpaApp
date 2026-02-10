@@ -88,5 +88,8 @@
 
     publishing:
       app_store_connect:
-        auth: integration
+        auth: api_key
+        api_key: $APP_STORE_PRIVATE_KEY
+        key_id: $APP_STORE_KEY_ID
+        issuer_id: $APP_STORE_ISSUER_ID
         submit_to_testflight: true
