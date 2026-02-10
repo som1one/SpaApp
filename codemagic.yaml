@@ -6,13 +6,13 @@
     working_directory: spa
 
     integrations:
-      app_store_connect: appstore  # Имя интеграции из Codemagic → Settings → Integrations
+      app_store_connect: appstore  
 
     environment:
       flutter: stable
       xcode: latest
       groups:
-        - "1"  # Группа с переменными: сертификаты и API ключи
+        - "1" 
 
     scripts:
       - name: Flutter pub get
@@ -88,5 +88,4 @@
 
     publishing:
       app_store_connect:
-        auth: integration
         submit_to_testflight: true
