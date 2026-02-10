@@ -84,11 +84,9 @@
       - build/ios/ipa/*.ipa
 
     publishing:
-      app_store_connect:
-        auth: api_key
-        submit_to_testflight: true
-        api_key:
-          key_id: $APP_STORE_KEY_ID
-          issuer_id: $APP_STORE_ISSUER_ID
-          key: $APP_STORE_PRIVATE_KEY
-          in_house: false
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
