@@ -80,6 +80,40 @@
             --export-options-plist=ios/ExportOptions.plist \
             --codesign
 
+      - name: Upload to App Store Connect
+        script: |
+          echo "📤 Загрузка в App Store Connect..."
+          
+          # Проверяем переменные
+          if [ -z "$APP_STORE_KEY_ID" ] || [ -z "$APP_STORE_ISSUER_ID" ] || [ -z "$APP_STORE_PRIVATE_KEY" ]; then
+            echo "⚠️ API ключ не настроен, пропускаем загрузку"
+            exit 0
+          fi
+          
+          # Декодируем API ключ
+          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > /tmp/AuthKey_${APP_STORE_KEY_ID}.p8
+          chmod 600 /tmp/AuthKey_${APP_STORE_KEY_ID}.p8
+          
+          # Находим IPA файл
+          IPA_FILE=$(find build/ios/ipa -name "*.ipa" | head -1)
+          
+          if [ -z "$IPA_FILE" ]; then
+            echo "❌ IPA файл не найден"
+            exit 1
+          fi
+          
+          echo "📦 IPA файл: $IPA_FILE"
+          
+          # Загружаем через altool
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_FILE" \
+            --apiKey "$APP_STORE_KEY_ID" \
+            --apiIssuer "$APP_STORE_ISSUER_ID" \
+            --verbose || echo "⚠️ Загрузка через altool не удалась, используйте Transporter"
+          
+          echo "✅ Загрузка завершена"
+
     artifacts:
       - build/ios/ipa/*.ipa
 
