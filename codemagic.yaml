@@ -47,27 +47,24 @@
         script: |
           echo "🔑 Настройка keychain..."
           
-          # Создаем временный keychain
-          KEYCHAIN_PASSWORD=$(openssl rand -base64 12)
-          KEYCHAIN_NAME=build.keychain
-          
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
-          security list-keychains -d user -s "$KEYCHAIN_NAME" login.keychain
-          security default-keychain -s "$KEYCHAIN_NAME"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
-          security set-keychain-settings -t 3600 -u "$KEYCHAIN_NAME"
-          
-          # Импортируем сертификат
+          # Импортируем сертификат в login.keychain (Flutter ищет там)
           CERT_PASSWORD="${CM_CERTIFICATE_PASSWORD:-12345}"
-          echo "Импорт сертификата..."
-          security import /tmp/certificate.p12 -k "$KEYCHAIN_NAME" -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
+          echo "Импорт сертификата в login.keychain..."
+          security import /tmp/certificate.p12 -k ~/Library/Keychains/login.keychain-db -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
+          
+          # Разблокируем login.keychain
+          security unlock-keychain ~/Library/Keychains/login.keychain-db
           
           # Настраиваем доступ к keychain
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db
           
           # Проверяем импортированные сертификаты
-          echo "Проверка сертификатов в keychain:"
-          security find-identity -v -p codesigning "$KEYCHAIN_NAME" || true
+          echo "Проверка сертификатов в login.keychain:"
+          security find-identity -v -p codesigning ~/Library/Keychains/login.keychain-db || true
+          
+          # Также проверяем без указания keychain (как делает Flutter)
+          echo "Проверка сертификатов (как Flutter):"
+          security find-identity -v -p codesigning || true
           
           # Копируем provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
