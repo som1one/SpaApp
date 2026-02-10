@@ -8,18 +8,106 @@
     environment:
       flutter: stable
       xcode: latest
+      groups:
+        - "1"  # Группа с переменными: сертификаты и API ключи
 
     scripts:
       - name: Flutter pub get
         script: flutter pub get
 
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: Decode certificates and profiles
+        script: |
+          echo "🔐 Декодирование сертификатов и профилей..."
+          
+          # Декодируем сертификат
+          if [ -n "$CM_CERTIFICATE" ]; then
+            echo "$CM_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+            echo "✅ Сертификат декодирован ($(stat -f%z /tmp/certificate.p12) байт)"
+          else
+            echo "❌ CM_CERTIFICATE не установлен"
+            exit 1
+          fi
+          
+          # Декодируем provisioning profile
+          if [ -n "$CM_PROVISIONING_PROFILE" ]; then
+            echo "$CM_PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
+            echo "✅ Provisioning profile декодирован ($(stat -f%z /tmp/profile.mobileprovision) байт)"
+          else
+            echo "❌ CM_PROVISIONING_PROFILE не установлен"
+            exit 1
+          fi
+
+      - name: Setup keychain and import certificate
+        script: |
+          echo "🔑 Настройка keychain..."
+          
+          # Создаем временный keychain
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 12)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Импортируем сертификат
+          CERT_PASSWORD="${CM_CERTIFICATE_PASSWORD:-12345}"
+          security import /tmp/certificate.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          
+          # Копируем provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          PROFILE_UUID=$(grep -aA1 UUID ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | grep -o "[-A-Z0-9]\{36\}" | head -1)
+          if [ -n "$PROFILE_UUID" ]; then
+            mv ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID.mobileprovision"
+            echo "✅ Provisioning profile установлен: $PROFILE_UUID"
+          fi
+          
+          echo "✅ Keychain настроен"
+
       - name: Build IPA
-        script: flutter build ipa --release
+        script: |
+          echo "🏗️ Сборка IPA..."
+          
+          # Собираем IPA с ручной подписью
+          flutter build ipa --release \
+            --export-options-plist=ios/ExportOptions.plist \
+            --codesign
+
+      - name: Prepare API key for upload
+        script: |
+          echo "🔑 Подготовка API ключа для загрузки..."
+          
+          # Проверяем переменные
+          if [ -z "$APP_STORE_KEY_ID" ] || [ -z "$APP_STORE_ISSUER_ID" ] || [ -z "$APP_STORE_PRIVATE_KEY" ]; then
+            echo "❌ API ключ не настроен (проверьте переменные)"
+            exit 1
+          fi
+          
+          # Декодируем API ключ из Base64
+          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > /tmp/AuthKey.p8
+          chmod 600 /tmp/AuthKey.p8
+          
+          echo "✅ API ключ подготовлен"
+          echo "📋 Key ID: $APP_STORE_KEY_ID"
+          echo "📋 Issuer ID: $APP_STORE_ISSUER_ID"
 
     artifacts:
       - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
-        auth: integration
+        auth: api_key
         submit_to_testflight: true
+        # Используем переменные окружения для API ключа
+        api_key:
+          key_id: $APP_STORE_KEY_ID
+          issuer_id: $APP_STORE_ISSUER_ID
+          key_file: /tmp/AuthKey.p8
+          in_house: false
