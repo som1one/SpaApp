@@ -103,11 +103,5 @@
 
     publishing:
       app_store_connect:
-        auth: api_key
+        auth: integration
         submit_to_testflight: true
-        # Используем переменные окружения для API ключа
-        api_key:
-          key_id: $APP_STORE_KEY_ID
-          issuer_id: $APP_STORE_ISSUER_ID
-          key_file: /tmp/AuthKey.p8
-          in_house: false
