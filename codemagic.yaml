@@ -5,9 +5,6 @@
     max_build_duration: 120
     working_directory: spa
 
-    integrations:
-      app_store_connect: appstore  
-
     environment:
       flutter: stable
       xcode: latest
@@ -88,7 +85,10 @@
 
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_PRIVATE_KEY
-        key_id: $APP_STORE_KEY_ID
-        issuer_id: $APP_STORE_ISSUER_ID
+        auth: api_key
         submit_to_testflight: true
+        api_key:
+          key_id: $APP_STORE_KEY_ID
+          issuer_id: $APP_STORE_ISSUER_ID
+          key: $APP_STORE_PRIVATE_KEY
+          in_house: false
