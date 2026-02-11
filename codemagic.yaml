@@ -44,7 +44,7 @@
     publishing:
       email:
         recipients:
-          - your-email@example.com
+          - farm49595@gmail.com
         notify:
           success: true
           failure: false
