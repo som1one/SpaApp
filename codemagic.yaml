@@ -30,8 +30,7 @@
           agvtool new-marketing-version 1.0.$(($BUILD_NUMBER))
       - name: Flutter build IPA and automatic versioning
         script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist 
+          flutter build ipa --release 
 
     artifacts:
       - build/ios/iphonesimulator/Runner.app
