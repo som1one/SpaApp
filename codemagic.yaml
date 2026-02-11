@@ -1,136 +1,45 @@
 ﻿workflows:
   ios-release:
     name: iOS Release
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     max_build_duration: 120
     working_directory: spa
-
+    integrations:
+      app_store_connect: Priroda Spa
     environment:
       flutter: stable
       xcode: latest
-      groups:
-        - "1" 
+    ios_signing:
+      distribution_type: app_store
+      bundle_identifier: ru.prirodaspa.app
 
     scripts:
-      - name: Flutter pub get
-        script: flutter pub get
-
-      - name: Install CocoaPods dependencies
+      - name: Get Flutter packages
         script: |
-          cd ios
-          pod install
-          cd ..
-
-      - name: Decode certificates and profiles
+          flutter packages pub get
+      - name: Install pods
         script: |
-          echo "🔐 Декодирование сертификатов и профилей..."
-          
-          # Декодируем сертификат
-          if [ -n "$CM_CERTIFICATE" ]; then
-            echo "$CM_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
-            echo "✅ Сертификат декодирован ($(stat -f%z /tmp/certificate.p12) байт)"
-          else
-            echo "❌ CM_CERTIFICATE не установлен"
-            exit 1
-          fi
-          
-          # Декодируем provisioning profile
-          if [ -n "$CM_PROVISIONING_PROFILE" ]; then
-            echo "$CM_PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
-            echo "✅ Provisioning profile декодирован ($(stat -f%z /tmp/profile.mobileprovision) байт)"
-          else
-            echo "❌ CM_PROVISIONING_PROFILE не установлен"
-            exit 1
-          fi
-
-      - name: Setup keychain and import certificate
+          find . -name "Podfile" -execdir pod install \;
+      - name: Set up code signing settings on Xcode project
         script: |
-          echo "🔑 Настройка keychain..."
-          
-          # Импортируем сертификат в login.keychain (Flutter ищет там)
-          CERT_PASSWORD="${CM_CERTIFICATE_PASSWORD:-12345}"
-          echo "Импорт сертификата в login.keychain..."
-          security import /tmp/certificate.p12 -k ~/Library/Keychains/login.keychain-db -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
-          
-          # Разблокируем login.keychain
-          security unlock-keychain ~/Library/Keychains/login.keychain-db
-          
-          # Настраиваем доступ к keychain
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db
-          
-          # Проверяем импортированные сертификаты
-          echo "Проверка сертификатов в login.keychain:"
-          security find-identity -v -p codesigning ~/Library/Keychains/login.keychain-db || true
-          
-          # Также проверяем без указания keychain (как делает Flutter)
-          echo "Проверка сертификатов (как Flutter):"
-          security find-identity -v -p codesigning || true
-          
-          # Копируем provisioning profile
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-          PROFILE_UUID=$(grep -aA1 UUID ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | grep -o "[-A-Z0-9]\{36\}" | head -1)
-          if [ -n "$PROFILE_UUID" ]; then
-            mv ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID.mobileprovision"
-            echo "✅ Provisioning profile установлен: $PROFILE_UUID"
-          fi
-          
-          # Проверяем provisioning profiles
-          echo "Проверка provisioning profiles:"
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
-          
-          echo "✅ Keychain настроен"
-
-      - name: Build IPA
+          xcode-project use-profiles
+      - name: Versioning
         script: |
-          echo "🏗️ Сборка IPA..."
-          
-          # Проверяем сертификаты перед сборкой
-          echo "Проверка доступных сертификатов:"
-          security find-identity -v -p codesigning || true
-          
-          # Собираем IPA с ручной подписью
+          cd ./ios
+          agvtool new-version -all $(($BUILD_NUMBER))
+          agvtool new-marketing-version 1.0.$(($BUILD_NUMBER))
+      - name: Flutter build IPA and automatic versioning
+        script: |
           flutter build ipa --release \
-            --export-options-plist=ios/ExportOptions.plist \
-            --codesign \
-            --verbose
-
-      - name: Upload to App Store Connect
-        script: |
-          echo "📤 Загрузка в App Store Connect..."
-          
-          # Проверяем переменные
-          if [ -z "$APP_STORE_KEY_ID" ] || [ -z "$APP_STORE_ISSUER_ID" ] || [ -z "$APP_STORE_PRIVATE_KEY" ]; then
-            echo "⚠️ API ключ не настроен, пропускаем загрузку"
-            exit 0
-          fi
-          
-          # Декодируем API ключ
-          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > /tmp/AuthKey_${APP_STORE_KEY_ID}.p8
-          chmod 600 /tmp/AuthKey_${APP_STORE_KEY_ID}.p8
-          
-          # Находим IPA файл
-          IPA_FILE=$(find build/ios/ipa -name "*.ipa" | head -1)
-          
-          if [ -z "$IPA_FILE" ]; then
-            echo "❌ IPA файл не найден"
-            exit 1
-          fi
-          
-          echo "📦 IPA файл: $IPA_FILE"
-          
-          # Загружаем через altool
-          xcrun altool --upload-app \
-            --type ios \
-            --file "$IPA_FILE" \
-            --apiKey "$APP_STORE_KEY_ID" \
-            --apiIssuer "$APP_STORE_ISSUER_ID" \
-            --verbose || echo "⚠️ Загрузка через altool не удалась, используйте Transporter"
-          
-          echo "✅ Загрузка завершена"
+            --export-options-plist=/Users/builder/export_options.plist 
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ios/iphonesimulator/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+      - /tmp/xcodebuild_logs/iosApp.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - /Users/builder/clone/build/ios/ipa/*.ipa
+      - flutter_drive.log
 
     publishing:
       email:
@@ -138,4 +47,7 @@
           - your-email@example.com
         notify:
           success: true
-          failure: true
+          failure: false
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
