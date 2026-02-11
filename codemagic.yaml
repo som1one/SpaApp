@@ -23,6 +23,13 @@
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
+      - name: Verify code signing setup
+        script: |
+          echo "🔍 Проверка сертификатов..."
+          security find-identity -v -p codesigning || true
+          echo ""
+          echo "🔍 Проверка provisioning profiles..."
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
       - name: Versioning
         script: |
           cd ./ios
