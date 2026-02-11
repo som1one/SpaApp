@@ -67,9 +67,19 @@
    - Скопируйте **Issuer ID** (формат: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
 
    **Private Key:**
-   - Откройте файл: `D:\PycharmProjects\Spa\ios_certs_2026\key_base64.txt`
-   - Скопируйте **ВСЮ строку** (без переносов)
+   - Откройте файл: `D:\PycharmProjects\Spa\ios_certs_2026\AuthKey_BR88FM6FGQ.p8`
+   - Скопируйте **ВСЁ содержимое** файла (включая строки `-----BEGIN PRIVATE KEY-----` и `-----END PRIVATE KEY-----`)
    - Вставьте в поле "Private Key"
+   
+   **Содержимое файла должно выглядеть так:**
+   ```
+   -----BEGIN PRIVATE KEY-----
+   MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgdENKToDGrO/+DJT2
+   D0m/iEg4QkOuCo647NwJ2ueQBMqgCgYIKoZIzj0DAQehRANCAARiFFmEHkpDamLx
+   s88/d6okToFAWMbSu+rBCYyN6y9T8YuRSxEccGa5BiZNng9nYcsjwKkopz4lb5CB
+   4ptozMsv
+   -----END PRIVATE KEY-----
+   ```
 
 4. Нажмите **"Add integration"**
 
@@ -211,15 +221,17 @@ D:\PycharmProjects\Spa\ios_certs_2026\profile.mobileprovision
 D:\PycharmProjects\Spa\Priroda_Spa.mobileprovision
 ```
 
-### API ключ (.p8):
+### API ключ (.p8) - используйте этот файл:
 ```
 D:\PycharmProjects\Spa\ios_certs_2026\AuthKey_BR88FM6FGQ.p8
 ```
+**Для интеграции:** Скопируйте всё содержимое файла (текст с BEGIN/END) и вставьте в поле "Private Key"
 
-### Base64 для API ключа:
+### Base64 для API ключа (если нужен для переменных окружения):
 ```
 D:\PycharmProjects\Spa\ios_certs_2026\key_base64.txt
 ```
+**Примечание:** Base64 нужен только для переменных окружения, для интеграции в UI используйте оригинальный .p8 файл
 
 ---
 
