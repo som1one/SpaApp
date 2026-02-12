@@ -19,17 +19,32 @@ class _MyAppState extends State<MyApp> {
   // По умолчанию русский язык
   Locale _locale = const Locale('ru');
 
+  @override
+  void initState() {
+    super.initState();
+    _loadLocale();
+  }
 
   Future<void> _loadLocale() async {
-    final locale = await LanguageService().getLocale();
-    // Гарантируем, что по умолчанию используется русский
-    final finalLocale = locale.languageCode == 'ru' || locale.languageCode == 'en' 
-        ? locale 
-        : const Locale('ru');
-    if (mounted) {
-      setState(() {
-        _locale = finalLocale;
-      });
+    try {
+      final locale = await LanguageService().getLocale();
+      // Гарантируем, что по умолчанию используется русский
+      final finalLocale = locale.languageCode == 'ru' || locale.languageCode == 'en' 
+          ? locale 
+          : const Locale('ru');
+      if (mounted) {
+        setState(() {
+          _locale = finalLocale;
+        });
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки локали: $e');
+      // В случае ошибки используем русский по умолчанию
+      if (mounted) {
+        setState(() {
+          _locale = const Locale('ru');
+        });
+      }
     }
   }
 

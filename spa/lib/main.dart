@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:ui';
 
 import 'app.dart';
 import 'firebase_options.dart';
@@ -20,6 +21,20 @@ Future<void> _firebaseMessagingBackgroundHandler(messaging.RemoteMessage message
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Глобальный обработчик ошибок Flutter
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter Error: ${details.exception}');
+    debugPrint('Stack trace: ${details.stack}');
+  };
+
+  // Обработчик ошибок в async функциях
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Platform Error: $error');
+    debugPrint('Stack trace: $stack');
+    return true;
+  };
 
   try {
     // Инициализация StorageService (работает на всех платформах)
