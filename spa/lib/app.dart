@@ -87,13 +87,19 @@ class _MyAppState extends State<MyApp> {
         // Если не поддерживается, возвращаем русский
         return const Locale('ru');
       },
-      initialRoute: AuthService().isAuthenticated
-          ? RouteNames.home
-          : RouteNames.registration,
+      // Всегда начинаем с registration, редирект произойдет после restoreSession
+      initialRoute: RouteNames.registration,
       onGenerateRoute: AppRouter.generateRoute,
       debugShowCheckedModeBanner: false,
       // Включаем поддержку высокой частоты обновления
       builder: (context, child) {
+        // Если child null, показываем индикатор загрузки вместо белого экрана
+        final widget = child ?? const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+        
         return MediaQuery(
           // Принудительно устанавливаем частоту обновления для плавности
           data: MediaQuery.of(context).copyWith(
@@ -103,7 +109,7 @@ class _MyAppState extends State<MyApp> {
           child: LocalizationProvider(
             locale: _locale,
             setLocale: _setLocale,
-            child: child ?? const SizedBox(),
+            child: widget,
           ),
         );
       },

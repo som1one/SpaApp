@@ -48,6 +48,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void initState() {
     super.initState();
     _phoneController.addListener(_handlePhoneFormatting);
+    
+    // Проверяем, авторизован ли пользователь после restoreSession
+    // Используем addPostFrameCallback чтобы дать время restoreSession выполниться
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Даем время на выполнение restoreSession в фоне
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (!mounted) return;
+      
+      // Проверяем аутентификацию
+      if (_authService.isAuthenticated) {
+        Navigator.of(context).pushReplacementNamed(RouteNames.home);
+      }
+    });
   }
 
   @override
