@@ -23,18 +23,13 @@
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
-      - name: Verify code signing setup
-        script: |
-          echo "🔍 Проверка сертификатов..."
-          security find-identity -v -p codesigning || true
-          echo ""
-          echo "🔍 Проверка provisioning profiles..."
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
       - name: Versioning
         script: |
           cd ./ios
-          agvtool new-version -all $(($BUILD_NUMBER))
-          agvtool new-marketing-version 1.0.$(($BUILD_NUMBER))
+          # Используем BUILD_NUMBER из Codemagic, если он есть, иначе берем из pubspec.yaml
+          BUILD_VERSION=${BUILD_NUMBER:-5}
+          agvtool new-version -all $BUILD_VERSION
+          agvtool new-marketing-version 1.0.1
       - name: Flutter build IPA and automatic versioning
         script: |
           flutter build ipa --release 
