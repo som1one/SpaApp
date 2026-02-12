@@ -1,4 +1,5 @@
 import 'dart:io' if (dart.library.html) 'dart:html' as io;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'api_service.dart';
@@ -21,6 +22,12 @@ class PushService {
 
   Future<void> init() async {
     try {
+      // Проверяем, что Firebase инициализирован
+      if (Firebase.apps.isEmpty) {
+        debugPrint('⚠️ Firebase not initialized, skipping PushService init');
+        return;
+      }
+
       // Запрос разрешений на уведомления (особенно важно для iOS)
       final settings = await _messaging.requestPermission(
         alert: true,

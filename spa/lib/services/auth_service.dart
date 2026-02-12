@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
@@ -110,9 +112,14 @@ class AuthService {
       _apiService.token = _token;
       _isAuthenticated = true;
       // После восстановления сессии можно синхронизировать push-токен
+      // Проверяем, что Firebase инициализирован перед вызовом PushService
       try {
-        await PushService().init();
-      } catch (_) {}
+        if (Firebase.apps.isNotEmpty) {
+          await PushService().init();
+        }
+      } catch (e) {
+        debugPrint('⚠️ Ошибка инициализации PushService в restoreSession: $e');
+      }
     }
   }
 

@@ -36,19 +36,31 @@ Future<void> main() async {
     return true;
   };
 
+  // Критичная инициализация - только StorageService
+  // Остальное делаем в фоне, чтобы не блокировать запуск приложения
   try {
-    // Инициализация StorageService (работает на всех платформах)
     await StorageService().init();
   } catch (e) {
     debugPrint('⚠️ Ошибка инициализации StorageService: $e');
   }
 
+  // Запускаем приложение сразу, не ждем остальную инициализацию
+  runApp(
+    const MyApp(),
+  );
+
+  // Инициализация в фоне (не блокирует запуск)
+  _initInBackground();
+}
+
+Future<void> _initInBackground() async {
   try {
     // Инициализация Firebase (может не работать на веб без правильной конфигурации)
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      debugPrint('✅ Firebase initialized');
     }
 
     // Push-уведомления работают только на мобильных платформах
@@ -66,23 +78,22 @@ Future<void> main() async {
 
   try {
     // Восстановление сессии пользователя
+    // restoreSession сам вызовет PushService().init() если нужно
     await AuthService().restoreSession();
+    debugPrint('✅ Session restored');
   } catch (e) {
     debugPrint('⚠️ Ошибка восстановления сессии: $e');
   }
 
+  // PushService инициализируется в restoreSession() если пользователь залогинен
+  // Если пользователь не залогинен, инициализируем PushService отдельно
   try {
-    // Инициализация Push-сервиса (только для мобильных)
-    if (!kIsWeb) {
+    if (!kIsWeb && Firebase.apps.isNotEmpty && !AuthService().isAuthenticated) {
       await PushService().init();
+      debugPrint('✅ PushService initialized (user not authenticated)');
     }
   } catch (e) {
     debugPrint('⚠️ Ошибка инициализации PushService: $e');
   }
-
-  // Включаем поддержку высокой частоты обновления (120 Гц)
-  runApp(
-    const MyApp(),
-  );
 }
 
