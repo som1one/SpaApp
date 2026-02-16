@@ -100,11 +100,16 @@ class _MyAppState extends State<MyApp> {
           ),
         );
         
+        // Определяем, является ли устройство iPad
+        final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+        
         return MediaQuery(
           // Принудительно устанавливаем частоту обновления для плавности
           data: MediaQuery.of(context).copyWith(
             // Поддержка 120 Гц на устройствах с высокой частотой обновления
             highContrast: false,
+            // Для iPad увеличиваем размер текста и элементов
+            textScaleFactor: isTablet ? 1.1 : 1.0,
           ),
           child: LocalizationProvider(
             locale: _locale,
