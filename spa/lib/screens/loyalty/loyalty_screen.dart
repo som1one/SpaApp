@@ -316,7 +316,12 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
               Builder(
                 builder: (context) {
                   final currentLevelName = info.currentLevel?.name ?? '0';
-                  final currentLevelIndex = levels.indexWhere((l) => l.title == 'Уровень $currentLevelName' || l.title == currentLevelName);
+                  // Ищем индекс текущего уровня, сравнивая по имени (может быть "0", "1" или "Уровень 0", "Уровень 1")
+                  final currentLevelIndex = levels.indexWhere((l) {
+                    final levelTitle = l.title.toLowerCase().replaceAll('уровень ', '').trim();
+                    final currentName = currentLevelName.toLowerCase().trim();
+                    return levelTitle == currentName || l.title == currentLevelName;
+                  });
                   
                   return Row(
                     children: List.generate(levels.length, (index) {
@@ -763,10 +768,11 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     }
 
     return [
-      const _TimelineLevel(title: 'Уровень 1', cashbackPercent: 3, threshold: 30000),
-      const _TimelineLevel(title: 'Уровень 2', cashbackPercent: 5, threshold: 100000),
-      const _TimelineLevel(title: 'Уровень 3', cashbackPercent: 7, threshold: 200000),
-      const _TimelineLevel(title: 'Уровень 4', cashbackPercent: 10, threshold: 300000),
+      const _TimelineLevel(title: '0', cashbackPercent: 1, threshold: 0),
+      const _TimelineLevel(title: '1', cashbackPercent: 3, threshold: 30000),
+      const _TimelineLevel(title: '2', cashbackPercent: 5, threshold: 100000),
+      const _TimelineLevel(title: '3', cashbackPercent: 7, threshold: 200000),
+      const _TimelineLevel(title: '4', cashbackPercent: 10, threshold: 300000),
     ];
   }
 }
