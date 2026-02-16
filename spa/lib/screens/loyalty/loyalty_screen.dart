@@ -285,15 +285,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            // Показываем уровень так, как его вернул бэкенд (имя уровня)
-            'Уровень ${info.currentLevel?.name ?? "0"}',
-            style: AppTextStyles.heading2.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ],
       ),
     );
@@ -322,31 +313,43 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           child: Column(
             children: [
               // Линия с делениями
-              Row(
-                children: List.generate(levels.length, (index) {
-                  final isLast = index == levels.length - 1;
-                  return Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.buttonPrimary,
-                          ),
-                        ),
-                        if (!isLast)
-                          Expanded(
-                            child: Container(
-                              height: 2,
-                              color: AppColors.borderLight,
+              Builder(
+                builder: (context) {
+                  final currentLevelName = info.currentLevel?.name ?? '0';
+                  final currentLevelIndex = levels.indexWhere((l) => l.title == 'Уровень $currentLevelName' || l.title == currentLevelName);
+                  
+                  return Row(
+                    children: List.generate(levels.length, (index) {
+                      final isLast = index == levels.length - 1;
+                      final isCurrent = index == currentLevelIndex;
+                      return Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: isCurrent ? 12 : 10,
+                              height: isCurrent ? 12 : 10,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isCurrent ? AppColors.buttonPrimary : AppColors.borderLight,
+                                border: isCurrent ? null : Border.all(
+                                  color: AppColors.borderLight,
+                                  width: 2,
+                                ),
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
+                            if (!isLast)
+                              Expanded(
+                                child: Container(
+                                  height: 2,
+                                  color: AppColors.borderLight,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
                   );
-                }),
+                },
               ),
               const SizedBox(height: 12),
               // Карточки уровней
