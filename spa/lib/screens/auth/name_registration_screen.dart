@@ -367,6 +367,13 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
                           keyboardType: TextInputType.name,
                           validator: _validateName,
                           textCapitalization: TextCapitalization.words,
+                          autovalidateMode: AutovalidateMode.disabled,
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) {
+                            FocusScope.of(context).nextFocus();
+                          },
+                          autocorrect: false,
+                          enableSuggestions: false,
                           style: AppTextStyles.bodyMedium.copyWith(
                             fontFamily: 'Inter24',
                             fontSize: 16,
@@ -431,6 +438,13 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
                           keyboardType: TextInputType.name,
                           validator: _validateSurname,
                           textCapitalization: TextCapitalization.words,
+                          autovalidateMode: AutovalidateMode.disabled,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) {
+                            FocusScope.of(context).unfocus();
+                          },
+                          autocorrect: false,
+                          enableSuggestions: false,
                           style: AppTextStyles.bodyMedium.copyWith(
                             fontFamily: 'Inter24',
                             fontSize: 16,
