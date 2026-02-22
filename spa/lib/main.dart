@@ -1,7 +1,9 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:ui';
 
 import 'app.dart';
 import 'firebase_options.dart';
@@ -20,37 +22,69 @@ Future<void> _firebaseMessagingBackgroundHandler(messaging.RemoteMessage message
 }
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Глобальный обработчик ошибок Flutter
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    debugPrint('Flutter Error: ${details.exception}');
-    debugPrint('Stack trace: ${details.stack}');
-  };
+    // Глобальный обработчик ошибок Flutter
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('Flutter Error: ${details.exception}');
+      debugPrint('Stack trace: ${details.stack}');
+    };
 
-  // Обработчик ошибок в async функциях
-  PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('Platform Error: $error');
+    // Показываем явный экран ошибки вместо "белого экрана" в релизе.
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return Material(
+        color: const Color(0xFFF7F6F2),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.error_outline, size: 44, color: Color(0xFFE53935)),
+                SizedBox(height: 12),
+                Text(
+                  'Произошла ошибка при запуске приложения',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Попробуйте перезапустить приложение.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    };
+
+    // Обработчик ошибок в async функциях
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('Platform Error: $error');
+      debugPrint('Stack trace: $stack');
+      return true;
+    };
+
+    // Важно: ничего не ждём до runApp(), чтобы не получить бесконечный белый экран
+    // на устройствах/версиях iOS, где SharedPreferences может подвиснуть.
+    unawaited(
+      StorageService().init().catchError((e) {
+        debugPrint('⚠️ Ошибка инициализации StorageService (background): $e');
+      }),
+    );
+
+    runApp(const MyApp());
+
+    // Инициализация в фоне (не блокирует запуск)
+    unawaited(_initInBackground());
+  }, (error, stack) {
+    debugPrint('Zone Error: $error');
     debugPrint('Stack trace: $stack');
-    return true;
-  };
-
-  // Критичная инициализация - только StorageService
-  // Остальное делаем в фоне, чтобы не блокировать запуск приложения
-  try {
-    await StorageService().init();
-  } catch (e) {
-    debugPrint('⚠️ Ошибка инициализации StorageService: $e');
-  }
-
-  // Запускаем приложение сразу, не ждем остальную инициализацию
-  runApp(
-    const MyApp(),
-  );
-
-  // Инициализация в фоне (не блокирует запуск)
-  _initInBackground();
+  });
 }
 
 Future<void> _initInBackground() async {
