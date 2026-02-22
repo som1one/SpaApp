@@ -16,7 +16,7 @@
     scripts:
       - name: Get Flutter packages
         script: |
-          flutter packages pub get
+          flutter pub get
       - name: Install pods
         script: |
           find . -name "Podfile" -execdir pod install \;
@@ -26,13 +26,18 @@
       - name: Versioning
         script: |
           cd ./ios
-          # Используем BUILD_NUMBER из Codemagic, если он есть, иначе берем из pubspec.yaml
-          BUILD_VERSION=${BUILD_NUMBER:-5}
-          agvtool new-version -all $BUILD_VERSION
-          agvtool new-marketing-version 1.0.1
+          set -e
+          # Важно: CFBundleVersion (build number) должен всегда расти.
+          # Чтобы исключить дубли, используем уникальный номер по дате/времени.
+          BUILD_VERSION="$(date +%Y%m%d%H%M)"
+          echo "Using BUILD_VERSION=$BUILD_VERSION"
+          echo "BUILD_VERSION=$BUILD_VERSION" >> "$CM_ENV"
+
+          agvtool new-version -all "$BUILD_VERSION"
+          agvtool new-marketing-version 1.0.2
       - name: Flutter build IPA and automatic versioning
         script: |
-          flutter build ipa --release 
+          flutter build ipa --release --build-name=1.0.2 --build-number="$BUILD_VERSION"
 
     artifacts:
       - build/ios/iphonesimulator/Runner.app
