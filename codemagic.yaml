@@ -25,15 +25,15 @@
           xcode-project use-profiles
       - name: Versioning
         script: |
-          cd ./ios
           set -e
-          # Извлекаем версию из pubspec.yaml
-          VERSION_NAME=$(grep "^version:" ../pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
-          BUILD_NUMBER=$(grep "^version:" ../pubspec.yaml | sed 's/.*+//')
+          # Извлекаем версию из pubspec.yaml (из корневой директории spa)
+          VERSION_LINE=$(grep "^version:" pubspec.yaml)
+          VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
+          BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
           
-          # Убеждаемся, что build number минимум 9 (выше предыдущей версии 7)
-          if [ "$BUILD_NUMBER" -lt 9 ]; then
-            BUILD_NUMBER=9
+          # Убеждаемся, что build number минимум 10 (выше предыдущей версии 7)
+          if [ -z "$BUILD_NUMBER" ] || [ "$BUILD_NUMBER" -lt 10 ]; then
+            BUILD_NUMBER=10
           fi
           
           echo "Using VERSION_NAME=$VERSION_NAME"
@@ -41,6 +41,7 @@
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$CM_ENV"
           echo "VERSION_NAME=$VERSION_NAME" >> "$CM_ENV"
 
+          cd ios
           agvtool new-version -all "$BUILD_NUMBER"
           agvtool new-marketing-version "$VERSION_NAME"
       - name: Flutter build IPA and automatic versioning
