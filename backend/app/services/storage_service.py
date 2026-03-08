@@ -33,4 +33,19 @@ class StorageService:
         relative_path = Path("uploads") / "menu" / filename
         return "/" + relative_path.as_posix()
 
+    @staticmethod
+    def save_avatar_image(file: UploadFile) -> str:
+        upload_dir = StorageService._base_path() / "avatars"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        suffix = Path(file.filename or "").suffix.lower()
+        filename = f"{uuid4().hex}{suffix or '.jpg'}"
+        file_path = upload_dir / filename
+
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        relative_path = Path("uploads") / "avatars" / filename
+        return "/" + relative_path.as_posix()
+
 

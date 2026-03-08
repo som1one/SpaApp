@@ -324,11 +324,14 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                   });
                   
                   return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: List.generate(levels.length, (index) {
                       final isLast = index == levels.length - 1;
                       final isCurrent = index == currentLevelIndex;
                       return Expanded(
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Container(
                               width: isCurrent ? 12 : 10,
@@ -359,9 +362,12 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
               const SizedBox(height: 12),
               // Карточки уровней
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: levels.map((level) {
                   return Expanded(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           level.title,
@@ -374,17 +380,19 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                         const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
+                            horizontal: 8,
+                            vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.buttonPrimary.withOpacity(0.06),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 '+${level.cashbackPercent}%',
+                                textAlign: TextAlign.center,
                                 style: AppTextStyles.heading3.copyWith(
                                   color: AppColors.buttonPrimary,
                                   fontWeight: FontWeight.w700,
@@ -392,11 +400,13 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'кэшбэк на spa\nпроцедуры',
+                                'кэшбэк на\nспа-терапию',
                                 textAlign: TextAlign.center,
+                                maxLines: 2,
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.textSecondary,
                                   fontSize: 11,
+                                  height: 1.2,
                                 ),
                               ),
                             ],

@@ -1,7 +1,6 @@
-import 'dart:io' if (dart.library.html) 'dart:html' as io;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
 import 'api_service.dart';
 import 'auth_service.dart';
 
@@ -14,10 +13,15 @@ class PushService {
   final _api = ApiService();
 
   String get _platform {
-    if (kIsWeb) return 'android'; // fallback для веба
-    if (io.Platform.isAndroid) return 'android';
-    if (io.Platform.isIOS) return 'ios';
-    return 'android'; // fallback
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'android';
+      case TargetPlatform.iOS:
+        return 'ios';
+      default:
+        return 'web'; // fallback
+    }
   }
 
   Future<void> init() async {

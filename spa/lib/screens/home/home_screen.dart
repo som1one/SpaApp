@@ -788,15 +788,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 16),
           _buildActionCard(
-            title: 'Абонементы',
+            title: 'Спа-меню',
             subtitle: 'Выгодные условия на курсы процедур',
-            icon: Icons.workspace_premium_rounded,
+            icon: Icons.local_florist_rounded,
             gradient: const LinearGradient(
               colors: [AppColors.primaryLight, AppColors.primary],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            onPressed: () => _openExternalUrl('https://prirodaspa.ru/gift-sertificate'),
+            onPressed: () => _openExternalUrl('https://prirodaspa.ru/spa-menu'),
           ),
           const SizedBox(height: 16),
           _buildActionCard(

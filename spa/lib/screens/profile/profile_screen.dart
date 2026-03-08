@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/image_cache_manager.dart';
@@ -232,6 +233,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 16),
                           _ProfileHeaderCard(user: _user),
                           const SizedBox(height: 16),
+                          _ContactInfoCard(),
+                          const SizedBox(height: 16),
                           if (_loyaltyInfo != null) _LoyaltyCard(loyaltyInfo: _loyaltyInfo!),
                           if (_loyaltyInfo != null) const SizedBox(height: 24),
                           _UpcomingBookingsSection(
@@ -338,10 +341,181 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+class _ContactInfoCard extends StatelessWidget {
+  const _ContactInfoCard();
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      // Ошибка открытия URL
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E5E5), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                color: AppColors.buttonPrimary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Адрес',
+                style: AppTextStyles.heading4.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'ул. Ключевская, д. 7, г. Петропавловск-Камчатский',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Мы в соцсетях',
+            style: AppTextStyles.heading4.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _SocialButton(
+                icon: Icons.send_rounded,
+                label: 'Telegram',
+                color: AppColors.textSecondary,
+                onTap: () => _launchUrl('https://t.me/priroda_kamchatka'),
+              ),
+              const SizedBox(width: 12),
+              _SocialButton(
+                icon: Icons.chat_bubble_rounded,
+                label: 'WhatsApp',
+                color: AppColors.textSecondary,
+                onTap: () => _launchUrl('https://wa.me/79006870737'),
+              ),
+              const SizedBox(width: 12),
+              _SocialButton(
+                icon: Icons.group_rounded,
+                label: 'ВКонтакте',
+                color: AppColors.textSecondary,
+                onTap: () => _launchUrl('https://vk.com/priroda_spa'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SocialButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.borderLight,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withOpacity(0.15),
+                        color.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  label,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileHeaderCard extends StatelessWidget {
   final User? user;
 
-  const _ProfileHeaderCard({required this.user});
+  const _ProfileHeaderCard({
+    required this.user,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -369,32 +543,15 @@ class _ProfileHeaderCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xFFFFC1CC), width: 2.5),
                 ),
-                  child: ClipOval(
-                    child: resolved != null && resolved.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: resolved,
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                            cacheManager: SpaImageCacheManager.instance,
-                            placeholder: (_, __) => Container(
-                              color: AppColors.cardBackground,
-                              child: Icon(
-                                Icons.person,
-                                color: AppColors.textSecondary,
-                                size: 36,
-                              ),
-                            ),
-                            errorWidget: (_, __, ___) => Container(
-                              color: AppColors.cardBackground,
-                              child: Icon(
-                                Icons.person,
-                                color: AppColors.textSecondary,
-                                size: 36,
-                              ),
-                            ),
-                          )
-                        : Container(
+                child: ClipOval(
+                  child: resolved != null && resolved.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: resolved,
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          cacheManager: SpaImageCacheManager.instance,
+                          placeholder: (_, __) => Container(
                             color: AppColors.cardBackground,
                             child: Icon(
                               Icons.person,
@@ -402,7 +559,24 @@ class _ProfileHeaderCard extends StatelessWidget {
                               size: 36,
                             ),
                           ),
-                  ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: AppColors.cardBackground,
+                            child: Icon(
+                              Icons.person,
+                              color: AppColors.textSecondary,
+                              size: 36,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: AppColors.cardBackground,
+                          child: Icon(
+                            Icons.person,
+                            color: AppColors.textSecondary,
+                            size: 36,
+                          ),
+                        ),
+                ),
               ),
               Positioned(
                 right: -2,

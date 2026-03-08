@@ -3,7 +3,7 @@ API endpoints для аутентификации
 """
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -16,6 +16,7 @@ from app.schemas.auth import (
     VkLoginRequest, RequestCodeRequest
 )
 from app.services.auth_service import AuthService
+from app.services.storage_service import StorageService
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -362,4 +363,63 @@ async def get_current_user_info(
         "auto_apply_loyalty_points": user.auto_apply_loyalty_points,
         "unique_code": user.unique_code,
         "is_authenticated": True,
+    }
+
+
+@router.post("/users/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Загрузить аватар пользователя"""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Файл должен быть изображением"
+        )
+    
+    try:
+        url = StorageService.save_avatar_image(file)
+        user.avatar_url = url
+        db.commit()
+        db.refresh(user)
+        
+        logger.info("Аватар загружен", extra={"user_id": user.id, "url": url})
+        return {"url": url}
+    except Exception as e:
+        logger.error("Ошибка загрузки аватара", extra={"user_id": user.id, "error": str(e)})
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при загрузке аватара"
+        )
+
+
+@router.put("/users/me")
+async def update_user_profile(
+    request: UserUpdateRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Обновить профиль пользователя"""
+    if request.avatar_url is not None:
+        user.avatar_url = request.avatar_url
+    
+    db.commit()
+    db.refresh(user)
+    
+    logger.info("Профиль обновлен", extra={"user_id": user.id})
+    return {
+        "id": user.id,
+        "name": user.name,
+        "surname": user.surname,
+        "email": user.email,
+        "phone": user.phone,
+        "is_verified": user.is_verified,
+        "avatar_url": user.avatar_url,
+        "loyalty_bonuses": user.loyalty_bonuses,
+        "spent_bonuses": user.spent_bonuses,
+        "auto_apply_loyalty_points": user.auto_apply_loyalty_points,
+        "unique_code": user.unique_code,
     }

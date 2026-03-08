@@ -49,9 +49,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _setLocale(Locale locale) {
+    // Сначала обновляем состояние для немедленного обновления UI
     setState(() {
       _locale = locale;
     });
+    // Сохраняем в хранилище асинхронно (не блокирует UI)
     LanguageService().setLocale(locale);
   }
 
@@ -60,7 +62,6 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'SPA Salon',
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
       locale: _locale,
       localizationsDelegates: const [

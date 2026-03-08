@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
@@ -8,6 +9,7 @@ import '../../services/language_service.dart';
 import '../../services/user_service.dart';
 import '../../services/loyalty_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 import '../../models/user.dart';
 import '../../models/loyalty.dart';
 import '../../routes/route_names.dart';
@@ -22,8 +24,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
-  bool _biometricEnabled = false;
-  String _selectedTheme = 'light';
   String _selectedLanguage = 'ru';
   
   User? _user;
@@ -112,6 +112,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _handleDeleteAccount() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: const Text(
+          'Удалить аккаунт?',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          'Вы уверены, что хотите удалить аккаунт? Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              l10n.cancel,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Удалить',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        // Показываем индикатор загрузки
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        // Вызываем API для удаления аккаунта
+        final apiService = ApiService();
+        await apiService.delete('/users/me');
+
+        // Выходим из аккаунта и очищаем данные
+        await AuthService().logout();
+        
+        if (mounted) {
+          Navigator.of(context).pop(); // Закрываем индикатор загрузки
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            RouteNames.registration,
+            (route) => false,
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Аккаунт успешно удален'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Закрываем индикатор загрузки
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка при удалении аккаунта: ${e.toString()}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -150,31 +235,130 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: l10n.support,
                     subtitle: l10n.contactUs,
                     icon: Icons.support_agent_outlined,
-                    onTap: () {
+                    onTap: () async {
                       HapticFeedback.lightImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.support),
-                          backgroundColor: AppColors.buttonPrimary,
-                        ),
-                      );
+                      const whatsappUrl = 'https://wa.me/79006870737';
+                      final uri = Uri.parse(whatsappUrl);
+                      try {
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Не удалось открыть WhatsApp'),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ошибка при открытии WhatsApp'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
-
-                  const SizedBox(height: 32),
-
-                  _buildSectionTitle(l10n.appearance),
-                  const SizedBox(height: 16),
-                  _buildLabel(l10n.theme),
                   const SizedBox(height: 12),
-                  _buildSegmentedControl(
-                    options: [l10n.light, l10n.dark],
-                    selectedIndex: _selectedTheme == 'light' ? 0 : 1,
-                    onChanged: (index) {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _selectedTheme = index == 0 ? 'light' : 'dark';
-                      });
+                  _buildNavigationCard(
+                    title: 'Связь с администраторами',
+                    subtitle: 'Написать администраторам',
+                    icon: Icons.admin_panel_settings_outlined,
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      // Показываем диалог с выбором способа связи
+                      if (!mounted) return;
+                      final choice = await showDialog<String>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          title: const Text(
+                            'Связь с администраторами',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.chat_bubble_outline, color: AppColors.textSecondary),
+                                title: const Text('Telegram'),
+                                subtitle: const Text('@priroda_kamchatka'),
+                                onTap: () => Navigator.of(context).pop('telegram'),
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.chat, color: AppColors.textSecondary),
+                                title: const Text('WhatsApp'),
+                                subtitle: const Text('+7 900 687-07-37'),
+                                onTap: () => Navigator.of(context).pop('whatsapp'),
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.language, color: AppColors.buttonPrimary),
+                                title: const Text('Сайт'),
+                                subtitle: const Text('prirodaspa.ru'),
+                                onTap: () => Navigator.of(context).pop('website'),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(
+                                l10n.cancel,
+                                style: const TextStyle(color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (choice == null) return;
+
+                      String url;
+                      switch (choice) {
+                        case 'telegram':
+                          url = 'https://t.me/priroda_kamchatka';
+                          break;
+                        case 'whatsapp':
+                          url = 'https://wa.me/79006870737';
+                          break;
+                        case 'website':
+                          url = 'https://prirodaspa.ru';
+                          break;
+                        default:
+                          return;
+                      }
+
+                      final uri = Uri.parse(url);
+                      try {
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Не удалось открыть ссылку'),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ошибка при открытии ссылки'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
 
@@ -187,33 +371,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildSegmentedControl(
                     options: [l10n.russian, l10n.english],
                     selectedIndex: _selectedLanguage == 'ru' ? 0 : 1,
-                    onChanged: (index) async {
+                    onChanged: (index) {
                       HapticFeedback.selectionClick();
                       final newLanguage = index == 0 ? 'ru' : 'en';
+                      final newLocale = Locale(newLanguage);
+                      
+                      // Обновляем локальное состояние
                       setState(() {
                         _selectedLanguage = newLanguage;
                       });
-                      await LanguageService().setLanguage(newLanguage);
-                      if (localizationProvider != null && mounted) {
-                        localizationProvider.setLocale(Locale(newLanguage));
-                      }
-                    },
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  _buildSectionTitle(l10n.security),
-                  const SizedBox(height: 16),
-                  _buildSwitchCard(
-                    title: l10n.biometricAuth,
-                    subtitle: l10n.biometricAuthSubtitle,
-                    value: _biometricEnabled,
-                    icon: Icons.fingerprint_outlined,
-                    onChanged: (value) {
-                      setState(() {
-                        _biometricEnabled = value;
-                      });
-                      HapticFeedback.lightImpact();
+                      
+                      // Обновляем язык через провайдер (это обновит все приложение и сохранит в хранилище)
+                      localizationProvider?.setLocale(newLocale);
                     },
                   ),
 
@@ -274,28 +443,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildNavigationCard(
                     title: l10n.privacyPolicy,
                     icon: Icons.privacy_tip_outlined,
-                    onTap: () {
+                    onTap: () async {
                       HapticFeedback.lightImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.privacyPolicy),
-                          backgroundColor: AppColors.buttonPrimary,
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _buildNavigationCard(
-                    title: l10n.termsOfUse,
-                    icon: Icons.description_outlined,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.termsOfUse),
-                          backgroundColor: AppColors.buttonPrimary,
-                        ),
-                      );
+                      const privacyUrl = 'https://som1one.github.io/Priroda-Spa-Politic/';
+                      final uri = Uri.parse(privacyUrl);
+                      try {
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Не удалось открыть ссылку'),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ошибка при открытии ссылки'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
                   const SizedBox(height: 12),
@@ -354,6 +528,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.logout_outlined,
                     color: AppColors.error,
                     onTap: _handleLogout,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionCard(
+                    title: 'Удалить аккаунт',
+                    icon: Icons.delete_forever_outlined,
+                    color: AppColors.error,
+                    onTap: _handleDeleteAccount,
                   ),
                   const SizedBox(height: 40),
                 ],

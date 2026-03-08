@@ -20,18 +20,18 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
   final List<_JourneyCardData> _journeys = const [
     _JourneyCardData(
       imagePath: 'assets/images/Home/journey_hotstones.png',
-      title: 'Тепло камней',
-      subtitle: 'Баланс энергии и глубокое расслабление тела.',
+      title: 'Клубная карта WELLNESS PRIRODA',
+      subtitle: 'Привилегии и специальные предложения для постоянных гостей.',
     ),
     _JourneyCardData(
       imagePath: 'assets/images/Home/journey_face_care.png',
-      title: 'Ритуал лица',
-      subtitle: 'Деликатный уход за кожей с эффектом сияния.',
+      title: 'Спа-терапия, зашитая в отдых',
+      subtitle: 'Комплексные программы для полного восстановления и релакса.',
     ),
     _JourneyCardData(
       imagePath: 'assets/images/Home/journey_relax.png',
-      title: 'Косметология',
-      subtitle: 'Косметология для сияния и абсолютного релакса.',
+      title: 'Конструктор спа-программы',
+      subtitle: 'Создайте индивидуальную программу под ваши потребности.',
     ),
   ];
 
@@ -70,7 +70,7 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Text(
-            'Популярные SPA-путешествия',
+            'Спа-терапия',
             style: AppTextStyles.heading3.copyWith(
               fontFamily: 'Inter24',
               fontSize: 20,

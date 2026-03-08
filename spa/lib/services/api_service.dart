@@ -1,11 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../utils/constants.dart';
 import '../utils/api_exceptions.dart';
-
-// Условный импорт для SocketException (только для мобильных)
-import 'dart:io' if (dart.library.html) 'dart:html' as io;
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -69,8 +68,9 @@ class ApiService {
         // SocketException доступен только на мобильных платформах
         if (!kIsWeb) {
           try {
-            // ignore: avoid_dynamic_calls
-            if (e is io.SocketException) {
+            // Проверяем тип через runtimeType для избежания ошибок компиляции на веб
+            final errorType = e.runtimeType.toString();
+            if (errorType == 'SocketException' || errorType.contains('SocketException')) {
               attempt++;
               if (attempt >= maxRetries) {
                 throw NetworkException(originalError: e);
@@ -193,6 +193,63 @@ class ApiService {
         final response = await http
             .delete(url, headers: _headers)
             .timeout(AppConstants.connectionTimeout);
+        return _handleResponse(response);
+      },
+      maxRetries: maxRetries,
+    );
+  }
+
+  Future<Map<String, dynamic>> uploadFile(
+    String endpoint,
+    File file, {
+    String fieldName = 'file',
+    int maxRetries = 3,
+  }) async {
+    if (kIsWeb) {
+      throw UnsupportedError('Загрузка файлов не поддерживается на веб-платформе');
+    }
+
+    return _executeWithRetry(
+      () async {
+        final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
+        
+        final request = http.MultipartRequest('POST', url);
+        
+        // Убираем Content-Type из headers для multipart запросов
+        // MultipartRequest сам установит правильный Content-Type с boundary
+        final headers = Map<String, String>.from(_headers);
+        headers.remove('Content-Type');
+        
+        request.headers.addAll(headers);
+        
+        final fileStream = file.openRead();
+        final fileLength = await file.length();
+        final extension = file.path.split('.').last.toLowerCase();
+        
+        MediaType contentType;
+        if (extension == 'jpg' || extension == 'jpeg') {
+          contentType = MediaType('image', 'jpeg');
+        } else if (extension == 'png') {
+          contentType = MediaType('image', 'png');
+        } else if (extension == 'webp') {
+          contentType = MediaType('image', 'webp');
+        } else {
+          contentType = MediaType('image', 'jpeg'); // По умолчанию
+        }
+        
+        final multipartFile = http.MultipartFile(
+          fieldName,
+          fileStream,
+          fileLength,
+          filename: file.path.split('/').last,
+          contentType: contentType,
+        );
+        
+        request.files.add(multipartFile);
+        
+        final streamedResponse = await request.send().timeout(AppConstants.connectionTimeout);
+        final response = await http.Response.fromStream(streamedResponse);
+        
         return _handleResponse(response);
       },
       maxRetries: maxRetries,
