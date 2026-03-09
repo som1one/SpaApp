@@ -88,7 +88,7 @@ class _MyAppState extends State<MyApp> {
         // Если не поддерживается, возвращаем русский
         return const Locale('ru');
       },
-      // Всегда начинаем с registration, редирект произойдет после restoreSession
+      // Начинаем с registration, но пользователи могут продолжить как гости
       initialRoute: RouteNames.registration,
       onGenerateRoute: AppRouter.generateRoute,
       debugShowCheckedModeBanner: false,

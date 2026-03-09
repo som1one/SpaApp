@@ -3,6 +3,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../services/auth_service.dart';
 import '../../models/loyalty.dart';
+import '../../routes/route_names.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/animations.dart';
 import '../../services/loyalty_service.dart';
@@ -53,6 +54,12 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
   }
 
   Future<void> _handleBookingClick() async {
+    // Проверяем авторизацию перед записью
+    if (!_authService.isAuthenticated) {
+      _showAuthRequiredDialog();
+      return;
+    }
+
     // Открываем форму YClients для записи
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
@@ -66,6 +73,63 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
     if (result != null && result['bookingCreated'] == true) {
       _loadLoyaltyInfo();
     }
+  }
+
+  void _showAuthRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Вам нужно войти',
+          style: AppTextStyles.heading3.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          'Для записи на услугу необходимо войти или зарегистрироваться',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text(
+              'Отмена',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushReplacementNamed(RouteNames.registration);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.buttonPrimary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Войти или зарегистрироваться',
+              style: AppTextStyles.button.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
 

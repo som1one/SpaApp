@@ -79,6 +79,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _error = null;
     });
 
+    // Проверяем авторизацию
+    if (!_authService.isAuthenticated) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = 'not_authenticated';
+      });
+      return;
+    }
+
     try {
       final token = _authService.token;
       if (token != null) {
@@ -311,6 +321,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildErrorState() {
+    // Если пользователь не авторизован, показываем специальное сообщение
+    if (_error == 'not_authenticated' || !_authService.isAuthenticated) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_outline, size: 64, color: AppColors.textSecondary),
+              const SizedBox(height: 16),
+              Text(
+                'Вам нужно войти',
+                style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Для доступа к профилю необходимо войти или зарегистрироваться',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pushReplacementNamed(RouteNames.registration);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.buttonPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Войти или зарегистрироваться',
+                  style: AppTextStyles.button.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Обычная ошибка
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),

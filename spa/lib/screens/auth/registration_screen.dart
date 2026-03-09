@@ -615,6 +615,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pushReplacementNamed(RouteNames.home);
+                        },
+                        child: Text(
+                          'Продолжить как гость',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontFamily: 'Inter24',
+                            color: AppColors.buttonPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

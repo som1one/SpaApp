@@ -5,8 +5,10 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../services/loyalty_service.dart';
 import '../../services/user_service.dart';
+import '../../services/auth_service.dart';
 import '../../models/loyalty.dart';
 import '../../models/user.dart';
+import '../../routes/route_names.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class LoyaltyScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   bool _useLoyaltyPoints = false;
   String? _error;
   final NumberFormat _rubFormatter = NumberFormat.decimalPattern('ru');
+  final _authService = AuthService();
 
   @override
   void initState() {
@@ -42,6 +45,15 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   }
 
   Future<void> _loadLoyaltyInfo() async {
+    // Проверяем авторизацию
+    if (!_authService.isAuthenticated) {
+      setState(() {
+        _isLoading = false;
+        _error = 'not_authenticated';
+      });
+      return;
+    }
+
     try {
       setState(() {
         _isLoading = true;
@@ -137,38 +149,90 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: AppColors.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Ошибка загрузки',
-                          style: AppTextStyles.heading3.copyWith(
-                            color: AppColors.textPrimary,
+                ? _error == 'not_authenticated' || !_authService.isAuthenticated
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.card_giftcard_outlined,
+                                size: 64,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Вам нужно войти',
+                                style: AppTextStyles.heading3.copyWith(
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Для доступа к программе лояльности необходимо войти или зарегистрироваться',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pushReplacementNamed(RouteNames.registration);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.buttonPrimary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Войти или зарегистрироваться',
+                                  style: AppTextStyles.button.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _error!,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                          textAlign: TextAlign.center,
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: AppColors.error,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Ошибка загрузки',
+                              style: AppTextStyles.heading3.copyWith(
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _error!,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: _loadLoyaltyInfo,
+                              child: const Text('Повторить'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _loadLoyaltyInfo,
-                          child: const Text('Повторить'),
-                        ),
-                      ],
-                    ),
-                  )
+                      )
                 : _loyaltyInfo == null
                     ? const Center(child: Text('Нет данных'))
                     : RefreshIndicator(
