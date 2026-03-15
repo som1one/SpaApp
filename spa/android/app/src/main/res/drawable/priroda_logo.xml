@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="200dp"
+    android:viewportWidth="400"
+    android:viewportHeight="200">
+
+    <!-- Левая дуга (холм) - от левого края к центру -->
+    <path
+        android:pathData="M50,140 Q125,100 200,130"
+        android:strokeColor="#3F7143"
+        android:strokeWidth="12"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Правая дуга (холм) - от центра к правому краю -->
+    <path
+        android:pathData="M200,130 Q275,100 350,140"
+        android:strokeColor="#3F7143"
+        android:strokeWidth="12"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Стебель (из центра дуг вверх) -->
+    <path
+        android:pathData="M200,130 L200,60"
+        android:strokeColor="#3F7143"
+        android:strokeWidth="5"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Левый лист (миндалевидной формы, направлен влево-вверх) -->
+    <path
+        android:pathData="M200,60 Q185,45 175,55 Q180,70 200,60"
+        android:fillColor="#3F7143" />
+
+    <!-- Правый лист (миндалевидной формы, направлен вправо-вверх) -->
+    <path
+        android:pathData="M200,60 Q215,45 225,55 Q220,70 200,60"
+        android:fillColor="#5C8A5F" />
+
+</vector>

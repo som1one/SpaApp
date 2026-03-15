@@ -1,0 +1,50 @@
+# iOS Certificates and Keys (НЕ коммитить!)
+*.pem
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.p8
+
+# Base64 encoded certificates
+*_base64.txt
+certificate_base64.txt
+profile_base64.txt
+
+# Private keys
+private_key.pem
+AuthKey_*.p8
+
+# Android keystores (уже должны быть в spa/.gitignore, но на всякий случай)
+*.jks
+*.keystore
+key.properties
+
+# Environment files
+.env
+.env.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.apk
+*.aab
+*.ipa
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+

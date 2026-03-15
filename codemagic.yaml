@@ -1,0 +1,68 @@
+﻿workflows:
+  ios-release:
+    name: iOS Release
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    working_directory: spa
+    integrations:
+      app_store_connect: Priroda Spa
+    environment:
+      flutter: stable
+      xcode: latest
+    ios_signing:
+      distribution_type: app_store
+      bundle_identifier: ru.prirodaspa.app
+
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install pods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
+      - name: Versioning
+        script: |
+          set -e
+          # Извлекаем версию из pubspec.yaml (из корневой директории spa)
+          VERSION_LINE=$(grep "^version:" pubspec.yaml)
+          VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
+          BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
+          
+          # Убеждаемся, что build number минимум 11 (выше предыдущей версии 10)
+          if [ -z "$BUILD_NUMBER" ] || [ "$BUILD_NUMBER" -lt 11 ]; then
+            BUILD_NUMBER=11
+          fi
+          
+          echo "Using VERSION_NAME=$VERSION_NAME"
+          echo "Using BUILD_NUMBER=$BUILD_NUMBER"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$CM_ENV"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$CM_ENV"
+
+          cd ios
+          agvtool new-version -all "$BUILD_NUMBER"
+          agvtool new-marketing-version "$VERSION_NAME"
+      - name: Flutter build IPA and automatic versioning
+        script: |
+          flutter build ipa --release --build-name="$VERSION_NAME" --build-number="$BUILD_NUMBER"
+
+    artifacts:
+      - build/ios/iphonesimulator/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+      - /tmp/xcodebuild_logs/iosApp.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - /Users/builder/clone/build/ios/ipa/*.ipa
+      - flutter_drive.log
+
+    publishing:
+      email:
+        recipients:
+          - farm49595@gmail.com
+        notify:
+          success: true
+          failure: false
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

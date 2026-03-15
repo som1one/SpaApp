@@ -1,0 +1,44 @@
+{
+  "@@locale": "en",
+  "appTitle": "SPA Salon",
+  "settings": "Settings",
+  "generalSettings": "General Settings",
+  "notifications": "Notifications",
+  "support": "Support",
+  "contactUs": "Contact us",
+  "appearance": "Appearance",
+  "theme": "Theme",
+  "light": "Light",
+  "dark": "Dark",
+  "language": "Language",
+  "appLanguage": "App Language",
+  "russian": "Русский",
+  "english": "English",
+  "security": "Security",
+  "biometricAuth": "Biometric Authentication",
+  "biometricAuthSubtitle": "Login with fingerprint or Face ID",
+  "additional": "Additional",
+  "aboutApp": "About App",
+  "privacyPolicy": "Privacy Policy",
+  "termsOfUse": "Terms of Use",
+  "clearCache": "Clear Cache",
+  "close": "Close",
+  "cancel": "Cancel",
+  "clear": "Clear",
+  "version": "Version {version}",
+  "@version": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheConfirm": "Are you sure you want to clear the cache?",
+  "cacheCleared": "Cache cleared",
+  "home": "Home",
+  "menu": "Menu",
+  "bookings": "Bookings",
+  "profile": "Profile",
+  "loyalty": "Loyalty"
+}
+

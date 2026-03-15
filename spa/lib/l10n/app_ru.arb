@@ -1,0 +1,141 @@
+{
+  "@@locale": "ru",
+  "appTitle": "SPA Salon",
+  "@appTitle": {
+    "description": "Название приложения"
+  },
+  "settings": "Настройки",
+  "@settings": {
+    "description": "Заголовок экрана настроек"
+  },
+  "generalSettings": "Общие настройки",
+  "@generalSettings": {
+    "description": "Секция общих настроек"
+  },
+  "notifications": "Уведомления",
+  "@notifications": {
+    "description": "Переключатель уведомлений"
+  },
+  "support": "Поддержка",
+  "@support": {
+    "description": "Пункт поддержки"
+  },
+  "contactUs": "Свяжитесь с нами",
+  "@contactUs": {
+    "description": "Подзаголовок поддержки"
+  },
+  "appearance": "Внешний вид",
+  "@appearance": {
+    "description": "Секция внешнего вида"
+  },
+  "theme": "Тема",
+  "@theme": {
+    "description": "Заголовок темы"
+  },
+  "light": "Светлая",
+  "@light": {
+    "description": "Светлая тема"
+  },
+  "dark": "Темная",
+  "@dark": {
+    "description": "Темная тема"
+  },
+  "language": "Язык",
+  "@language": {
+    "description": "Секция языка"
+  },
+  "appLanguage": "Язык приложения",
+  "@appLanguage": {
+    "description": "Заголовок языка приложения"
+  },
+  "russian": "Русский",
+  "@russian": {
+    "description": "Русский язык"
+  },
+  "english": "English",
+  "@english": {
+    "description": "Английский язык"
+  },
+  "security": "Безопасность",
+  "@security": {
+    "description": "Секция безопасности"
+  },
+  "biometricAuth": "Биометрическая авторизация",
+  "@biometricAuth": {
+    "description": "Биометрическая авторизация"
+  },
+  "biometricAuthSubtitle": "Вход по отпечатку или Face ID",
+  "@biometricAuthSubtitle": {
+    "description": "Подзаголовок биометрической авторизации"
+  },
+  "additional": "Дополнительно",
+  "@additional": {
+    "description": "Секция дополнительно"
+  },
+  "aboutApp": "О приложении",
+  "@aboutApp": {
+    "description": "О приложении"
+  },
+  "privacyPolicy": "Политика конфиденциальности",
+  "@privacyPolicy": {
+    "description": "Политика конфиденциальности"
+  },
+  "termsOfUse": "Условия использования",
+  "@termsOfUse": {
+    "description": "Условия использования"
+  },
+  "clearCache": "Очистить кэш",
+  "@clearCache": {
+    "description": "Очистить кэш"
+  },
+  "close": "Закрыть",
+  "@close": {
+    "description": "Закрыть"
+  },
+  "cancel": "Отмена",
+  "@cancel": {
+    "description": "Отмена"
+  },
+  "clear": "Очистить",
+  "@clear": {
+    "description": "Очистить"
+  },
+  "version": "Версия {version}",
+  "@version": {
+    "description": "Версия приложения",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheConfirm": "Вы уверены, что хотите очистить кэш?",
+  "@clearCacheConfirm": {
+    "description": "Подтверждение очистки кэша"
+  },
+  "cacheCleared": "Кэш очищен",
+  "@cacheCleared": {
+    "description": "Кэш очищен"
+  },
+  "home": "Главная",
+  "@home": {
+    "description": "Главная"
+  },
+  "menu": "Меню",
+  "@menu": {
+    "description": "Меню"
+  },
+  "bookings": "Записи",
+  "@bookings": {
+    "description": "Записи"
+  },
+  "profile": "Профиль",
+  "@profile": {
+    "description": "Профиль"
+  },
+  "loyalty": "Лояльность",
+  "@loyalty": {
+    "description": "Лояльность"
+  }
+}
+

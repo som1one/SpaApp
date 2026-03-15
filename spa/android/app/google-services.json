@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1083357348512",
+    "project_id": "spaapp-c870f",
+    "storage_bucket": "spaapp-c870f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083357348512:android:c0193f7597881ccc1bbfc5",
+        "android_client_info": {
+          "package_name": "ru.prirodaspa.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVK2ZT6vK2rTWFH0nPWO5rEu1K-JLLf_o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

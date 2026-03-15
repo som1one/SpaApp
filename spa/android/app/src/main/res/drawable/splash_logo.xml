@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Ограничиваем размер логотипа, чтобы не растягивался -->
+    <item
+        android:width="300dp"
+        android:height="300dp"
+        android:gravity="center">
+        <bitmap
+            android:src="@drawable/splash_prirodaa"
+            android:gravity="center"
+            android:tileMode="disabled" />
+    </item>
+</layer-list>
+
