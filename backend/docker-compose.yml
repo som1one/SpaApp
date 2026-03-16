@@ -57,9 +57,10 @@ services:
       dockerfile: admin/Dockerfile
     container_name: spa_admin
     environment:
-      # Если админка в Docker, используем имя сервиса backend (внутренний порт 8000)
-      # Если админка запущена локально (npm run dev), используем localhost:9003
-      VITE_API_BASE_URL: http://backend:8000/api/v1
+      # Публичный URL API для браузера (должен быть доступен с устройства пользователя).
+      # При необходимости переопредели через переменную окружения:
+      # ADMIN_VITE_API_BASE_URL=https://api.example.com/api/v1
+      VITE_API_BASE_URL: ${ADMIN_VITE_API_BASE_URL:-http://194.87.187.146:9003/api/v1}
     ports:
       - "3001:3001"
     depends_on:
@@ -68,4 +69,3 @@ services:
 volumes:
   postgres_data:
   redis_data:
-

@@ -104,18 +104,27 @@ docker exec -it spa_backend python scripts/create_super_admin.py
 
 ## 4. Админка: указание API при сборке/запуске
 
-Сейчас админка в Docker запускается как Vite dev-сервер с переменной:
+Админка в Docker запускается как Vite dev-сервер и должна получать **публичный URL API**, доступный из браузера пользователя.
 
-`VITE_API_BASE_URL=http://backend:8000/api/v1`
+В `backend/docker-compose.yml` используется:
 
-Это работает, когда браузер открывает админку по тому же хосту (порт 3001), а запросы к API проксируются или бэкенд доступен по тому же домену. Если админка открывается по домену, а API по другому домену/порту, при сборке статики нужно передать публичный URL API, например:
+`VITE_API_BASE_URL=${ADMIN_VITE_API_BASE_URL:-http://194.87.187.146:9003/api/v1}`
+
+То есть можно задать свой URL через переменную `ADMIN_VITE_API_BASE_URL`, например:
+
+```bash
+export ADMIN_VITE_API_BASE_URL=https://api.твой-домен.ru/api/v1
+docker compose -f backend/docker-compose.yml up -d --build admin
+```
+
+Если админка собирается отдельно как статика, при build тоже передай публичный API URL:
 
 ```bash
 # Пример для production-сборки админки (если будет отдельный Dockerfile с build)
 VITE_API_BASE_URL=https://api.твой-домен.ru/api/v1 npm run build
 ```
 
-В текущем `admin/Dockerfile` используется `npm run dev`; переменная задаётся в `docker-compose.yml` для контейнера. Для продакшена с отдельным доменом настрой в `backend/docker-compose.yml`:
+В текущем `admin/Dockerfile` используется `npm run dev`; переменная задаётся в `docker-compose.yml` для контейнера. Для продакшена с отдельным доменом можно также зафиксировать URL прямо в compose:
 
 ```yaml
 admin:
