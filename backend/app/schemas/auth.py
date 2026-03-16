@@ -84,3 +84,7 @@ class VkLoginRequest(BaseModel):
     photo_url: Optional[str] = None
 
 
+class UserUpdateRequest(BaseModel):
+    """Схема для обновления профиля пользователя"""
+    avatar_url: Optional[str] = None
+

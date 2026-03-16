@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.schemas.auth import (
     RegisterRequest, LoginRequest, VerifyEmailRequest,
     ResendCodeRequest, TokenResponse, AuthResponse, GoogleLoginRequest,
-    VkLoginRequest, RequestCodeRequest
+    VkLoginRequest, RequestCodeRequest, UserUpdateRequest
 )
 from app.services.auth_service import AuthService
 from app.services.storage_service import StorageService
