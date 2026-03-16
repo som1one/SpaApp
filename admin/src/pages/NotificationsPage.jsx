@@ -57,7 +57,7 @@ const NotificationsPage = () => {
       });
       setData(response.items);
       setTotal(response.total);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить кампании');
     } finally {
       setLoading(false);
@@ -73,7 +73,7 @@ const NotificationsPage = () => {
       await updateNotificationStatus(record.id, status);
       message.success('Статус обновлён');
       load();
-    } catch (error) {
+    } catch {
       message.error('Не удалось обновить статус');
     }
   };
@@ -156,7 +156,7 @@ const NotificationsPage = () => {
       message.success('Кампания создана');
       setModalOpen(false);
       load();
-    } catch (error) {
+    } catch {
       message.error('Не удалось создать кампанию');
     }
   };

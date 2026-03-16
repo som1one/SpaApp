@@ -49,13 +49,8 @@ function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    try {
-      await apiLogin(email, password);
-      return refreshProfile();
-    } catch (error) {
-      // Пробрасываем ошибку дальше, чтобы LoginPage мог показать сообщение
-      throw error;
-    }
+    await apiLogin(email, password);
+    return refreshProfile();
   };
 
   const logout = () => {
@@ -84,10 +79,8 @@ function AuthProvider({ children }) {
   );
 }
 
-function useAuth() {
+export function useAuth() {
   return useContext(AuthContext);
 }
 
-export { AuthProvider, useAuth };
-
-
+export { AuthProvider };

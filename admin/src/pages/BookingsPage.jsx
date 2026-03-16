@@ -67,7 +67,7 @@ const BookingsPage = ({ defaultStatus } = {}) => {
       setData(response.items);
       setTotal(response.total);
       return response;
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить записи');
     } finally {
       setLoading(false);
@@ -109,7 +109,7 @@ const BookingsPage = ({ defaultStatus } = {}) => {
           setSelectedBooking(updatedRecord);
         }
       }
-    } catch (error) {
+    } catch {
       message.error('Не удалось обновить статус');
     }
   };
@@ -167,6 +167,7 @@ const BookingsPage = ({ defaultStatus } = {}) => {
       dataIndex: 'phone',
       render: (value) => value || '—',
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], []);
 
   const handleTableChange = (paginationConfig) => {
@@ -202,7 +203,7 @@ const BookingsPage = ({ defaultStatus } = {}) => {
       message.success('Статусы обновлены');
       setSelectedRowKeys([]);
       await load();
-    } catch (error) {
+    } catch {
       message.error('Не удалось обновить статусы');
     }
   };
@@ -364,7 +365,7 @@ const BookingsPage = ({ defaultStatus } = {}) => {
                         setEditingDateTime(dayjs(updatedBooking.appointment_datetime));
                       }
                     }
-                  } catch (e) {
+                  } catch {
                     message.error('Не удалось обновить дату/время');
                   } finally {
                     setSavingDateTime(false);

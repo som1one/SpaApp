@@ -37,16 +37,6 @@ const iconOptions = [
 
 const LoyaltyPage = () => {
   const { user } = useAuth();
-
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Управлять программой лояльности могут только супер-администраторы.
-        </Typography.Text>
-      </Card>
-    );
-  }
   const [levels, setLevels] = useState([]);
   const [levelsLoading, setLevelsLoading] = useState(true);
   const [levelsModalOpen, setLevelsModalOpen] = useState(false);
@@ -65,12 +55,22 @@ const LoyaltyPage = () => {
   const [formBonus] = Form.useForm();
   const [formSettings] = Form.useForm();
 
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять программой лояльности могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
+
   const loadLevels = async () => {
     try {
       setLevelsLoading(true);
       const data = await fetchLoyaltyLevels();
       setLevels(data);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить уровни лояльности');
     } finally {
       setLevelsLoading(false);
@@ -82,7 +82,7 @@ const LoyaltyPage = () => {
       setBonusesLoading(true);
       const data = await fetchLoyaltyBonuses();
       setBonuses(data);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить бонусы лояльности');
     } finally {
       setBonusesLoading(false);
@@ -94,7 +94,7 @@ const LoyaltyPage = () => {
       setSettingsLoading(true);
       const data = await fetchLoyaltySettings();
       setSettings(data);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить настройки лояльности');
     } finally {
       setSettingsLoading(false);

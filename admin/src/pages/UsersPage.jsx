@@ -27,16 +27,6 @@ import { adjustUserLoyalty, getUserByCode } from '../api/loyalty';
 
 const UsersPage = () => {
   const { user } = useAuth();
-
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Доступ к управлению пользователями есть только у супер-администраторов.
-        </Typography.Text>
-      </Card>
-    );
-  }
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -64,12 +54,22 @@ const UsersPage = () => {
   const cashbackPercent = codeSearchResult?.cashback_percent || 3;
   const bonusesToAward = Math.floor(servicesTotal * cashbackPercent / 100);
 
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Доступ к управлению пользователями есть только у супер-администраторов.
+        </Typography.Text>
+      </Card>
+    );
+  }
+
   const loadUserBookings = async (userId) => {
     try {
       setUserBookingsLoading(true);
       const response = await fetchBookings({ userId, pageSize: 5 });
       setUserBookings(response.items);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить записи пользователя');
     } finally {
       setUserBookingsLoading(false);

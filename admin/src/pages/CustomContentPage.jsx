@@ -32,6 +32,11 @@ const blockTypeOptions = [
 
 const CustomContentPage = () => {
   const { user } = useAuth();
+  const [blocks, setBlocks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalInitial, setModalInitial] = useState(null);
+  const [form] = Form.useForm();
 
   if (user?.role !== 'super_admin') {
     return (
@@ -42,18 +47,13 @@ const CustomContentPage = () => {
       </Card>
     );
   }
-  const [blocks, setBlocks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalInitial, setModalInitial] = useState(null);
-  const [form] = Form.useForm();
 
   const loadBlocks = async () => {
     try {
       setLoading(true);
       const data = await fetchCustomContentBlocks();
       setBlocks(data);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить блоки контента');
     } finally {
       setLoading(false);
@@ -61,7 +61,10 @@ const CustomContentPage = () => {
   };
 
   useEffect(() => {
-    loadBlocks();
+    if (user?.role === 'super_admin') {
+      loadBlocks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleOpenModal = (record) => {
@@ -178,6 +181,7 @@ const CustomContentPage = () => {
         ),
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

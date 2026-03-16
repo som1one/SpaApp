@@ -16,16 +16,6 @@ const actionLabels = {
 
 const AuditPage = () => {
   const { user } = useAuth();
-
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Журнал действий доступен только супер-администраторам.
-        </Typography.Text>
-      </Card>
-    );
-  }
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,7 +33,7 @@ const AuditPage = () => {
       });
       setData(response.items);
       setTotal(response.total);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить журнал');
     } finally {
       setLoading(false);
@@ -51,8 +41,21 @@ const AuditPage = () => {
   };
 
   useEffect(() => {
-    load();
+    if (user?.role === 'super_admin') {
+      load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Журнал действий доступен только супер-администраторам.
+        </Typography.Text>
+      </Card>
+    );
+  }
 
   const columns = [
     {

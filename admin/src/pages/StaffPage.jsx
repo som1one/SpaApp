@@ -48,16 +48,6 @@ const DAYS_OF_WEEK = [
 
 const StaffPage = () => {
   const { user } = useAuth();
-
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Управлять мастерами и расписанием могут только супер-администраторы.
-        </Typography.Text>
-      </Card>
-    );
-  }
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(true);
   const [staffModalOpen, setStaffModalOpen] = useState(false);
@@ -71,12 +61,22 @@ const StaffPage = () => {
   const [formStaff] = Form.useForm();
   const [formSchedule] = Form.useForm();
 
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять мастерами и расписанием могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
+
   const loadStaff = async () => {
     try {
       setStaffLoading(true);
       const data = await fetchStaff();
       setStaff(data);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить мастеров');
     } finally {
       setStaffLoading(false);
@@ -87,7 +87,7 @@ const StaffPage = () => {
     try {
       const data = await fetchServices();
       setServices(data);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить услуги');
     }
   };
@@ -96,7 +96,7 @@ const StaffPage = () => {
     try {
       const data = await fetchStaffSchedules(staffId);
       setSchedules(data);
-    } catch (error) {
+    } catch {
       message.error('Не удалось загрузить расписание');
     }
   };

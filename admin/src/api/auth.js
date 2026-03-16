@@ -1,23 +1,18 @@
 import apiClient, { setAuthToken } from './client';
 
 export const login = async (email, password) => {
-  try {
-    const response = await apiClient.post('/admin/auth/login', {
-      email,
-      password,
-    }, {
-      timeout: 15000, // 15 секунд для логина
-    });
-    const token = response.data?.access_token;
-    if (token) {
-      setAuthToken(token);
-      apiClient.defaults.headers.Authorization = `Bearer ${token}`;
-    }
-    return token;
-  } catch (error) {
-    // Пробрасываем ошибку дальше, чтобы LoginPage мог её обработать
-    throw error;
+  const response = await apiClient.post('/admin/auth/login', {
+    email,
+    password,
+  }, {
+    timeout: 15000, // 15 секунд для логина
+  });
+  const token = response.data?.access_token;
+  if (token) {
+    setAuthToken(token);
+    apiClient.defaults.headers.Authorization = `Bearer ${token}`;
   }
+  return token;
 };
 
 export const logout = () => {
