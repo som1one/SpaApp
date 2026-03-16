@@ -37,10 +37,16 @@ apiClient.interceptors.response.use(
     } else if (error.response) {
       const status = error.response.status;
       if (status === 401) {
-        error.message = 'Сессия истекла. Пожалуйста, войдите снова.';
-        localStorage.removeItem('admin_token');
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        // Не показываем "Сессия истекла" для эндпоинта логина
+        const isLoginRequest = error.config?.url?.includes('/admin/auth/login');
+        if (isLoginRequest) {
+          error.message = 'Неверный email или пароль';
+        } else {
+          error.message = 'Сессия истекла. Пожалуйста, войдите снова.';
+          localStorage.removeItem('admin_token');
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
         }
       } else if (status === 403) {
         error.message = 'Недостаточно прав для выполнения этого действия.';
