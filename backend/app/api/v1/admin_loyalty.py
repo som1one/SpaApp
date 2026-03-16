@@ -354,12 +354,12 @@ async def adjust_user_loyalty_bonuses(
     if services:
         total_services_cost = sum(max(0, service.price_rub) for service in services)
         if total_services_cost > 0:
+            from app.utils.timezone import moscow_now
             booking = Booking(
                 user_id=user.id,
                 service_name=", ".join(service.name for service in services),
                 service_duration=None,
                 service_price=total_services_cost * 100,  # в копейках
-                from app.utils.timezone import moscow_now
                 appointment_datetime=moscow_now(),
                 status=BookingStatus.COMPLETED,
                 notes=reason_text,

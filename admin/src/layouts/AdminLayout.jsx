@@ -22,8 +22,6 @@ const AdminLayout = () => {
   const { user, logout } = useAuth();
 
   const selectedKeys = useMemo(() => {
-    if (location.pathname.startsWith('/bookings/cancelled')) return ['bookings-cancelled'];
-    if (location.pathname.startsWith('/bookings')) return ['bookings'];
     if (location.pathname.startsWith('/users')) return ['users'];
     if (location.pathname.startsWith('/invites')) return ['invites'];
     if (location.pathname.startsWith('/menu')) return ['menu'];
@@ -37,12 +35,10 @@ const AdminLayout = () => {
 
   const isSuperAdmin = user?.role === 'super_admin';
 
-  // Обычные админы видят главную, записи и SPA-меню (только просмотр),
+  // Обычные админы видят только главную и SPA-меню (только просмотр),
   // все остальные разделы доступны только супер-админам.
   const baseMenuItems = [
     { key: 'dashboard', icon: <HomeOutlined />, label: 'Главная' },
-    { key: 'bookings', icon: <BellOutlined />, label: 'Записи' },
-    { key: 'bookings-cancelled', icon: <BellOutlined />, label: 'Отменённые' },
     { key: 'menu', icon: <MenuOutlined />, label: 'SPA-меню' },
   ];
 
@@ -86,8 +82,6 @@ const AdminLayout = () => {
           selectedKeys={selectedKeys}
           onClick={({ key }) => {
             if (key === 'dashboard') navigate('/');
-            else if (key === 'bookings') navigate('/bookings');
-            else if (key === 'bookings-cancelled') navigate('/bookings/cancelled');
             else navigate(`/${key}`);
           }}
         />

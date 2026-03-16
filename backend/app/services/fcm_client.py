@@ -17,11 +17,18 @@ class FcmClient:
         tokens: Iterable[str],
         data: Mapping[str, str] | None = None,
     ) -> tuple[int, int]:
-        """Отправка пушей на список токенов (legacy HTTP API, batched)."""
+        """Отправка пушей на список токенов (legacy HTTP API, batched).
+
+        Если FCM_SERVER_KEY не задан, считаем это ошибкой конфигурации и
+        явно падаем, чтобы админ в интерфейсе увидел, что пуши не отправлены.
+        """
         server_key = settings.FCM_SERVER_KEY
         if not server_key:
-            logger.warning("FCM_SERVER_KEY not configured, skipping push")
-            return 0, 0
+            logger.error(
+                "FCM_SERVER_KEY not configured, cannot send push notifications",
+                extra={"hint": "Добавьте FCM_SERVER_KEY в .env (см. backend/ENV_SETUP.md)"},
+            )
+            raise RuntimeError("FCM is not configured (missing FCM_SERVER_KEY)")
 
         tokens_list: List[str] = [t for t in tokens if t]
         if not tokens_list:
