@@ -25,7 +25,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   String _selectedLanguage = 'ru';
-  
+
   User? _user;
   LoyaltyInfo? _loyaltyInfo;
   bool _isLoading = true;
@@ -168,14 +168,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Выходим из аккаунта и очищаем данные
         await AuthService().logout();
-        
+
         if (mounted) {
           Navigator.of(context).pop(); // Закрываем индикатор загрузки
           Navigator.of(context).pushNamedAndRemoveUntil(
             RouteNames.registration,
             (route) => false,
           );
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Аккаунт успешно удален'),
@@ -216,7 +216,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (!_isLoading && _user != null && _loyaltyInfo != null)
                     _buildLoyaltyWidget(_loyaltyInfo!),
                   const SizedBox(height: 32),
-                  
                   _buildSectionTitle(l10n.generalSettings),
                   const SizedBox(height: 16),
                   _buildSwitchCard(
@@ -230,140 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       HapticFeedback.lightImpact();
                     },
                   ),
-                  const SizedBox(height: 12),
-                  _buildNavigationCard(
-                    title: l10n.support,
-                    subtitle: l10n.contactUs,
-                    icon: Icons.support_agent_outlined,
-                    onTap: () async {
-                      HapticFeedback.lightImpact();
-                      const whatsappUrl = 'https://wa.me/79006870737';
-                      final uri = Uri.parse(whatsappUrl);
-                      try {
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } else {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Не удалось открыть WhatsApp'),
-                                backgroundColor: AppColors.error,
-                              ),
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Ошибка при открытии WhatsApp'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _buildNavigationCard(
-                    title: 'Связь с администраторами',
-                    subtitle: 'Написать администраторам',
-                    icon: Icons.admin_panel_settings_outlined,
-                    onTap: () async {
-                      HapticFeedback.lightImpact();
-                      // Показываем диалог с выбором способа связи
-                      if (!mounted) return;
-                      final choice = await showDialog<String>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          title: const Text(
-                            'Связь с администраторами',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.chat_bubble_outline, color: AppColors.textSecondary),
-                                title: const Text('Telegram'),
-                                subtitle: const Text('@priroda_kamchatka'),
-                                onTap: () => Navigator.of(context).pop('telegram'),
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.chat, color: AppColors.textSecondary),
-                                title: const Text('WhatsApp'),
-                                subtitle: const Text('+7 900 687-07-37'),
-                                onTap: () => Navigator.of(context).pop('whatsapp'),
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.language, color: AppColors.buttonPrimary),
-                                title: const Text('Сайт'),
-                                subtitle: const Text('prirodaspa.ru'),
-                                onTap: () => Navigator.of(context).pop('website'),
-                              ),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: Text(
-                                l10n.cancel,
-                                style: const TextStyle(color: AppColors.textSecondary),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (choice == null) return;
-
-                      String url;
-                      switch (choice) {
-                        case 'telegram':
-                          url = 'https://t.me/priroda_kamchatka';
-                          break;
-                        case 'whatsapp':
-                          url = 'https://wa.me/79006870737';
-                          break;
-                        case 'website':
-                          url = 'https://prirodaspa.ru';
-                          break;
-                        default:
-                          return;
-                      }
-
-                      final uri = Uri.parse(url);
-                      try {
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } else {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Не удалось открыть ссылку'),
-                                backgroundColor: AppColors.error,
-                              ),
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Ошибка при открытии ссылки'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                  ),
-
                   const SizedBox(height: 32),
-
                   _buildSectionTitle(l10n.language),
                   const SizedBox(height: 16),
                   _buildLabel(l10n.appLanguage),
@@ -375,19 +241,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       HapticFeedback.selectionClick();
                       final newLanguage = index == 0 ? 'ru' : 'en';
                       final newLocale = Locale(newLanguage);
-                      
+
                       // Обновляем локальное состояние
                       setState(() {
                         _selectedLanguage = newLanguage;
                       });
-                      
+
                       // Обновляем язык через провайдер (это обновит все приложение и сохранит в хранилище)
                       localizationProvider?.setLocale(newLocale);
                     },
                   ),
-
                   const SizedBox(height: 32),
-
                   _buildSectionTitle(l10n.additional),
                   const SizedBox(height: 16),
                   _buildNavigationCard(
@@ -431,7 +295,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               onPressed: () => Navigator.of(context).pop(),
                               child: Text(
                                 l10n.close,
-                                style: const TextStyle(color: AppColors.buttonPrimary),
+                                style: const TextStyle(
+                                    color: AppColors.buttonPrimary),
                               ),
                             ),
                           ],
@@ -445,11 +310,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.privacy_tip_outlined,
                     onTap: () async {
                       HapticFeedback.lightImpact();
-                      const privacyUrl = 'https://som1one.github.io/Priroda-Spa-Politic/';
+                      const privacyUrl =
+                          'https://som1one.github.io/Priroda-Spa-Politic/';
                       final uri = Uri.parse(privacyUrl);
                       try {
                         if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
                         } else {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -495,7 +362,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               onPressed: () => Navigator.of(context).pop(),
                               child: Text(
                                 l10n.cancel,
-                                style: const TextStyle(color: AppColors.textSecondary),
+                                style: const TextStyle(
+                                    color: AppColors.textSecondary),
                               ),
                             ),
                             TextButton(
@@ -697,7 +565,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: info.progress,
                     minHeight: 6,
                     backgroundColor: Colors.white.withOpacity(0.2),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
               ],
@@ -743,7 +612,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Color _parseLoyaltyColor(String hex) {
     try {
-      return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
+      return Color(
+          int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
     } catch (e) {
       return AppColors.buttonPrimary;
     }
@@ -756,21 +626,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (rubles < 200000) return 3;
     return 4;
   }
-  
+
   // Форматирование рублей
   String _formatRub(int amount) {
     final formatter = NumberFormat.decimalPattern('ru');
     return '${formatter.format(amount)} ₽';
   }
-  
+
   // Получить градиент для уровня на основе цветов приложения
   LinearGradient _getLoyaltyGradient(LoyaltyInfo info) {
     // Используем номер уровня из имени (0, 1, 2, 3, 4), иначе по minBonuses
     final levelName = info.currentLevel?.name;
-    final levelNum = levelName != null 
-        ? int.tryParse(levelName) ?? (info.currentLevel != null ? _getLevelNumber(info.currentLevel!.minBonuses) : 0)
+    final levelNum = levelName != null
+        ? int.tryParse(levelName) ??
+            (info.currentLevel != null
+                ? _getLevelNumber(info.currentLevel!.minBonuses)
+                : 0)
         : 0;
-    
+
     switch (levelNum) {
       case 1:
         return LinearGradient(
@@ -1133,7 +1006,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   curve: Curves.easeInOut,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.buttonPrimary : Colors.transparent,
+                    color: isSelected
+                        ? AppColors.buttonPrimary
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
@@ -1141,8 +1016,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontFamily: 'Inter24',
-                      color: isSelected ? Colors.white : AppColors.textSecondary,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color:
+                          isSelected ? Colors.white : AppColors.textSecondary,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),

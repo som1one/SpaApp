@@ -86,5 +86,6 @@ class VkLoginRequest(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     """Схема для обновления профиля пользователя"""
-    avatar_url: Optional[str] = None
-
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    surname: Optional[str] = Field(None, max_length=100)
+    avatar_url: Optional[str] = Field(None, max_length=500)

@@ -5,14 +5,12 @@ import {
   BellOutlined,
   LogoutOutlined,
   UserAddOutlined,
-  MenuOutlined,
   StarOutlined,
-  UserOutlined,
   FileImageOutlined,
 } from '@ant-design/icons';
 import { useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 const { Header, Sider, Content } = Layout;
 
@@ -24,9 +22,7 @@ const AdminLayout = () => {
   const selectedKeys = useMemo(() => {
     if (location.pathname.startsWith('/users')) return ['users'];
     if (location.pathname.startsWith('/invites')) return ['invites'];
-    if (location.pathname.startsWith('/menu')) return ['menu'];
     if (location.pathname.startsWith('/loyalty')) return ['loyalty'];
-    if (location.pathname.startsWith('/staff')) return ['staff'];
     if (location.pathname.startsWith('/custom-content')) return ['custom-content'];
     if (location.pathname.startsWith('/audit')) return ['audit'];
     if (location.pathname.startsWith('/notifications')) return ['notifications'];
@@ -35,15 +31,12 @@ const AdminLayout = () => {
 
   const isSuperAdmin = user?.role === 'super_admin';
 
-  // Обычные админы видят только главную и SPA-меню (только просмотр),
-  // все остальные разделы доступны только супер-админам.
+  // Обычные админы видят только главную.
   const baseMenuItems = [
     { key: 'dashboard', icon: <HomeOutlined />, label: 'Главная' },
-    { key: 'menu', icon: <MenuOutlined />, label: 'SPA-меню' },
   ];
 
   const superAdminExtraItems = [
-    { key: 'staff', icon: <UserOutlined />, label: 'Мастера' },
     { key: 'loyalty', icon: <StarOutlined />, label: 'Лояльность' },
     { key: 'custom-content', icon: <FileImageOutlined />, label: 'Контент' },
     { key: 'users', icon: <TeamOutlined />, label: 'Пользователи' },
@@ -111,5 +104,4 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
-
 

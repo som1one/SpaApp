@@ -453,6 +453,11 @@ async def yclients_webhook(
         client_email = client.get("email", "")
         client_phone = client.get("phone", "")
         
+        # Ищем существующую запись по YClients ID (может пригодиться для fallback по user_id)
+        existing_booking = db.query(Booking).filter(
+            Booking.notes.contains(f"YClients. ID: {record_id}")
+        ).first()
+
         # Ищем пользователя
         user = None
         
@@ -482,6 +487,13 @@ async def yclients_webhook(
                 if user:
                     logger.info(f"Пользователь найден по телефону для записи {record_id}")
         
+        # Fallback: если контактные данные не пришли из YClients,
+        # берем пользователя из уже существующей локальной записи.
+        if not user and existing_booking and existing_booking.user_id:
+            user = db.query(User).filter(User.id == existing_booking.user_id).first()
+            if user:
+                logger.info(f"Пользователь взят из локальной записи по YClients ID {record_id}")
+
         if not user:
             logger.warning(f"Пользователь не найден для записи {record_id} (email: {client_email}, phone: {client_phone}, comment: {comment[:50]})")
             return {"status": "ok", "message": "Пользователь не найден"}
@@ -508,11 +520,6 @@ async def yclients_webhook(
             booking_status = BookingStatus.CANCELLED
         else:
             booking_status = BookingStatus.PENDING
-        
-        # Ищем существующую запись по YClients ID
-        existing_booking = db.query(Booking).filter(
-            Booking.notes.contains(f"YClients. ID: {record_id}")
-        ).first()
         
         # Если не нашли по ID, ищем по уникальному коду пользователя и дате
         if not existing_booking and user and user.unique_code:
@@ -578,4 +585,3 @@ async def yclients_webhook(
         logger.error(f"Ошибка обработки webhook от YClients: {e}", exc_info=True)
         db.rollback()
         return {"status": "error", "message": str(e)}
-

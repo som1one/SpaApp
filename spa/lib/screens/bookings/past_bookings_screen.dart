@@ -84,9 +84,8 @@ class _PastBookingsScreenState extends State<PastBookingsScreen> {
 
       // Загружаем локальные записи
       final localBookingsData = await _localBookingService.getLocalBookings();
-      final localBookings = localBookingsData
-          .map((json) => Booking.fromJson(json))
-          .toList();
+      final localBookings =
+          localBookingsData.map((json) => Booking.fromJson(json)).toList();
 
       // Объединяем записи
       final allBookings = [...apiBookings, ...localBookings];
@@ -169,6 +168,20 @@ class _PastBookingsScreenState extends State<PastBookingsScreen> {
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary,
+              size: 20,
+            ),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                Navigator.of(context).pushReplacementNamed(RouteNames.profile);
+              }
+            },
+          ),
           title: Text(
             'Прошедшие записи',
             style: AppTextStyles.heading3.copyWith(
@@ -301,27 +314,27 @@ class _PastBookingsScreenState extends State<PastBookingsScreen> {
               ),
             ],
           ),
-        if (booking.masterName != null && booking.masterName!.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(
-                Icons.person_outline,
-                size: 16,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Мастер: ${booking.masterName}',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+          if (booking.masterName != null && booking.masterName!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Мастер: ${booking.masterName}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -431,5 +444,3 @@ class _PastBookingsScreenState extends State<PastBookingsScreen> {
     );
   }
 }
-
-

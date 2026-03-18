@@ -14,22 +14,19 @@ import {
   Tabs,
   Typography,
 } from 'antd';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { useEffect, useState } from 'react';
 import {
   createStaff,
   createStaffSchedule,
-  createStaffService,
   deleteStaff,
   deleteStaffSchedule,
-  deleteStaffService,
   fetchStaff,
   fetchStaffById,
   fetchStaffSchedules,
   updateStaff,
   updateStaffSchedule,
 } from '../api/staff';
-import { fetchServices } from '../api/services';
 import dayjs from 'dayjs';
 
 const { TextArea } = Input;
@@ -54,22 +51,12 @@ const StaffPage = () => {
   const [staffModalInitial, setStaffModalInitial] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [schedules, setSchedules] = useState([]);
-  const [services, setServices] = useState([]);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [scheduleModalInitial, setScheduleModalInitial] = useState(null);
 
   const [formStaff] = Form.useForm();
   const [formSchedule] = Form.useForm();
-
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Управлять мастерами и расписанием могут только супер-администраторы.
-        </Typography.Text>
-      </Card>
-    );
-  }
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const loadStaff = async () => {
     try {
@@ -83,15 +70,6 @@ const StaffPage = () => {
     }
   };
 
-  const loadServices = async () => {
-    try {
-      const data = await fetchServices();
-      setServices(data);
-    } catch {
-      message.error('Не удалось загрузить услуги');
-    }
-  };
-
   const loadSchedules = async (staffId) => {
     try {
       const data = await fetchStaffSchedules(staffId);
@@ -102,9 +80,12 @@ const StaffPage = () => {
   };
 
   useEffect(() => {
+    if (!isSuperAdmin) {
+      setStaffLoading(false);
+      return;
+    }
     loadStaff();
-    loadServices();
-  }, []);
+  }, [isSuperAdmin]);
 
   const handleOpenStaffModal = (record) => {
     setStaffModalInitial(record || null);
@@ -187,6 +168,16 @@ const StaffPage = () => {
       }
     }
   };
+
+  if (!isSuperAdmin) {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять мастерами и расписанием могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
 
   const handleSubmitSchedule = async (values) => {
     try {
@@ -567,4 +558,3 @@ const StaffPage = () => {
 };
 
 export default StaffPage;
-

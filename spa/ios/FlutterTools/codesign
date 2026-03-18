@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -eu
+
+REAL_CODESIGN="/usr/bin/codesign"
+REAL_XATTR="/usr/bin/xattr"
+
+find_bundle_root() {
+  target="$1"
+  current="$target"
+
+  while [ "$current" != "/" ] && [ "$current" != "." ]; do
+    case "$current" in
+      *.framework|*.bundle|*.appex|*.app)
+        printf '%s\n' "$current"
+        return 0
+        ;;
+    esac
+    current="$(dirname "$current")"
+  done
+
+  return 1
+}
+
+if [ "$#" -gt 0 ]; then
+  last_arg="${!#}"
+  {
+    printf 'codesign wrapper: %s\n' "$*"
+    printf 'target: %s\n' "$last_arg"
+  } >> /tmp/spa_codesign_wrapper.log
+  if bundle_root="$(find_bundle_root "$last_arg")"; then
+    printf 'bundle_root: %s\n' "$bundle_root" >> /tmp/spa_codesign_wrapper.log
+    "$REAL_XATTR" -cr "$bundle_root" 2>/dev/null || true
+  fi
+fi
+
+exec "$REAL_CODESIGN" "$@"

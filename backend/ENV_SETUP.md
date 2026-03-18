@@ -97,20 +97,35 @@ CANCELLATION_HOURS_BEFORE=24      # За сколько часов можно о
 
 ### Firebase Cloud Messaging (push-уведомления)
 
-Чтобы админка могла отправлять push-рассылки на мобильные устройства:
+Чтобы админка могла отправлять push-рассылки на мобильные устройства, настройте **FCM v1** (рекомендуется) или Legacy.
+
+**Вариант 1 — FCM HTTP v1 API (рекомендуется):**
+
+1. [Firebase Console](https://console.firebase.google.com/) → ваш проект → **Project settings** → вкладка **General** → скопируйте **Project ID**.
+2. Вкладка **Service accounts** → **Generate new private key** — скачайте JSON ключа сервисного аккаунта.
+3. В `.env` задайте один из вариантов:
+
+   **Через путь к файлу:**
+   ```env
+   FCM_PROJECT_ID=ваш-project-id
+   GOOGLE_APPLICATION_CREDENTIALS=/абсолютный/путь/к/ключу.json
+   ```
+
+   **Через JSON строкой (удобно для Docker):**
+   ```env
+   FCM_PROJECT_ID=ваш-project-id
+   FCM_CREDENTIALS_JSON={"type":"service_account","project_id":"...",...}
+   ```
+
+**Вариант 2 — Legacy (если включён Cloud Messaging API (Legacy)):**
 
 ```env
 FCM_SERVER_KEY=ваш-server-key-из-firebase-console
 ```
 
-**Как получить Server Key:**
+Server key: Firebase Console → **Project settings** → вкладка **Cloud Messaging** → блок **Cloud Messaging API (Legacy)**.
 
-1. [Firebase Console](https://console.firebase.google.com/) → ваш проект → **Project settings** (шестерёнка) → вкладка **Cloud Messaging**.
-2. В блоке **Cloud Messaging API (Legacy)** скопируйте **Server key**.
-3. Если блока нет — в [Google Cloud Console](https://console.cloud.google.com/) для проекта Firebase включите **Cloud Messaging API (Legacy)** (APIs & Services → Library → «Cloud Messaging API»).
-4. Вставьте ключ в `.env` как `FCM_SERVER_KEY=...` (без кавычек и пробелов).
-
-Без `FCM_SERVER_KEY` рассылки из раздела «Рассылки» не будут отправляться (в логах будет предупреждение). Подробнее про настройку Firebase и приложения см. **`spa/docs/FIREBASE_SETUP.md`**.
+Без настроенного FCM (v1 или Legacy) рассылки из раздела «Рассылки» не будут отправляться. Подробнее: **`spa/docs/FIREBASE_SETUP.md`**, **`spa/docs/FIREBASE_CREDENTIALS.md`**.
 
 ## Проверка настроек
 

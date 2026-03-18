@@ -8,9 +8,19 @@ from app.models.booking import Booking, BookingStatus
 from app.models.service import Service, ServiceCategory
 from app.models.admin import Admin, AdminInvite
 from app.models.admin_audit import AdminAudit
-from app.models.notification_campaign import NotificationCampaign, NotificationChannel, NotificationStatus
+from app.models.notification_campaign import (
+    NotificationCampaign,
+    NotificationCategory,
+    NotificationChannel,
+    NotificationStatus,
+)
 from app.models.device_token import DeviceToken
-from app.models.loyalty import LoyaltyLevel, LoyaltyBonus
+from app.models.loyalty import (
+    LoyaltyLevel,
+    LoyaltyBonus,
+    LoyaltyProgramSettings,
+    LoyaltyTransaction,
+)
 from app.models.staff import Staff, StaffSchedule, StaffService
 from app.models.custom_content import CustomContentBlock, ContentBlockType
 
@@ -26,15 +36,17 @@ __all__ = [
     "AdminInvite",
     "AdminAudit",
     "NotificationCampaign",
+    "NotificationCategory",
     "NotificationChannel",
     "NotificationStatus",
     "DeviceToken",
     "LoyaltyLevel",
     "LoyaltyBonus",
+    "LoyaltyProgramSettings",
+    "LoyaltyTransaction",
     "Staff",
     "StaffSchedule",
     "StaffService",
     "CustomContentBlock",
     "ContentBlockType",
 ]
-

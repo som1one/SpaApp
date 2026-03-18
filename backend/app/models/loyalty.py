@@ -1,7 +1,7 @@
 """
 Модели для программы лояльности
 """
-from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
+from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 
@@ -49,3 +49,53 @@ class LoyaltyBonus(BaseModel):
     def __repr__(self):
         return f"<LoyaltyBonus {self.title}>"
 
+
+class LoyaltyProgramSettings(BaseModel):
+    """Постоянные настройки программы лояльности"""
+    __tablename__ = "loyalty_program_settings"
+
+    loyalty_enabled = Column(Boolean, default=True, nullable=False)
+    points_per_100_rub = Column(Integer, default=5, nullable=False)
+    welcome_bonus_amount = Column(Integer, default=0, nullable=False)
+    bonus_expiry_days = Column(Integer, default=30, nullable=False)
+    yclients_bonus_field_id = Column(String(100), nullable=True)
+
+    def __repr__(self):
+        return (
+            "<LoyaltyProgramSettings "
+            f"enabled={self.loyalty_enabled} "
+            f"points_per_100_rub={self.points_per_100_rub}>"
+        )
+
+
+class LoyaltyTransaction(BaseModel):
+    """История операций по бонусам"""
+    __tablename__ = "loyalty_transactions"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_transaction_id = Column(
+        Integer,
+        ForeignKey("loyalty_transactions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    amount = Column(Integer, nullable=False)
+    transaction_type = Column(String(50), nullable=False, index=True)
+    status = Column(String(30), default="active", nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    reason = Column(Text, nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    expired_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", backref="loyalty_transactions")
+    booking = relationship("Booking", backref="loyalty_transactions")
+    source_transaction = relationship("LoyaltyTransaction", remote_side="LoyaltyTransaction.id")
+
+    def __repr__(self):
+        return (
+            f"<LoyaltyTransaction user_id={self.user_id} "
+            f"type={self.transaction_type} amount={self.amount}>"
+        )

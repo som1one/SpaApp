@@ -30,7 +30,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
 
   Future<void> _loadLoyaltyInfo() async {
     if (!_authService.isAuthenticated) return;
-    
+
     setState(() {
       _isLoadingLoyalty = true;
     });
@@ -68,7 +68,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
         ),
       ),
     );
-    
+
     // Обновляем информацию о бонусах после записи
     if (result != null && result['bookingCreated'] == true) {
       _loadLoyaltyInfo();
@@ -110,7 +110,8 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).pushReplacementNamed(RouteNames.registration);
+              Navigator.of(context)
+                  .pushReplacementNamed(RouteNames.registration);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.buttonPrimary,
@@ -132,7 +133,6 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -147,7 +147,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
               height: 44,
               child: Center(
                 child: Text(
-                  'Меню',
+                  'Онлайн запись',
                   style: AppTextStyles.heading3.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -193,7 +193,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
               children: [
                 // Красивая секция записи с бонусами
                 _buildBookingSection(),
-                
+
                 // Отступ снизу
                 const SizedBox(height: 80),
               ],
@@ -209,7 +209,6 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
       ),
     );
   }
-
 
   Widget _buildBookingSection() {
     return FadeInWidget(
@@ -342,7 +341,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Информация о бонусах
                   if (_loyaltyInfo != null) ...[
                     Container(
@@ -406,7 +405,8 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.white),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -422,7 +422,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // Кнопка записи
                   SizedBox(
                     width: double.infinity,
@@ -467,7 +467,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
                       ),
                     ),
                   ),
-                  
+
                   // Подсказка
                   const SizedBox(height: 12),
                   Row(
@@ -497,6 +497,4 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
       ),
     );
   }
-
 }
-

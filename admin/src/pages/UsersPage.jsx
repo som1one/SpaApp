@@ -16,11 +16,11 @@ import {
   Typography,
   message,
 } from 'antd';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import dayjs from '../utils/dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import { fetchUsers } from '../api/users';
+import { exportUsersExcel, fetchUsers } from '../api/users';
 import { fetchBookings } from '../api/bookings';
 import { useDebounce } from '../hooks/useDebounce';
 import { adjustUserLoyalty, getUserByCode } from '../api/loyalty';
@@ -41,11 +41,13 @@ const UsersPage = () => {
   const [userBookingsLoading, setUserBookingsLoading] = useState(false);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [adjustLoading, setAdjustLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [adjustForm] = Form.useForm();
   const [codeSearchModalOpen, setCodeSearchModalOpen] = useState(false);
   const [codeSearchLoading, setCodeSearchLoading] = useState(false);
   const [codeSearchForm] = Form.useForm();
   const [codeSearchResult, setCodeSearchResult] = useState(null);
+  const isSuperAdmin = user?.role === 'super_admin';
   const watchedServices = Form.useWatch('services', codeSearchForm) || [];
   // Расчет бонусов для начисления: сумма услуг * процент кэшбэка уровня
   const servicesTotal = watchedServices
@@ -53,16 +55,6 @@ const UsersPage = () => {
     .reduce((sum, service) => sum + Number(service.price_rub || 0), 0);
   const cashbackPercent = codeSearchResult?.cashback_percent || 3;
   const bonusesToAward = Math.floor(servicesTotal * cashbackPercent / 100);
-
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Доступ к управлению пользователями есть только у супер-администраторов.
-        </Typography.Text>
-      </Card>
-    );
-  }
 
   const loadUserBookings = async (userId) => {
     try {
@@ -105,10 +97,41 @@ const UsersPage = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
+      const blob = await exportUsersExcel({
+        search: debouncedSearch,
+        isActive: filters.isActive,
+        isVerified: filters.isVerified,
+        minLoyalty: filters.minLoyalty,
+        sortBy: sort.sortBy,
+        sortDir: sort.sortDir,
+      });
+      const fileUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = `users_export_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(fileUrl);
+      message.success('Файл выгрузки сформирован');
+    } catch (error) {
+      message.error(error?.response?.data?.detail || 'Не удалось выгрузить пользователей');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   useEffect(() => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isSuperAdmin]);
 
   // Автоматически загружаем при изменении debouncedSearch
   useEffect(() => {
@@ -134,7 +157,7 @@ const UsersPage = () => {
     }
   };
 
-  const handleSpendBonusesByCode = async (values) => {
+  const handleAwardBonusesByCode = async (values) => {
     if (!codeSearchResult) {
       message.error('Сначала найдите пользователя по коду');
       return;
@@ -145,7 +168,6 @@ const UsersPage = () => {
       const services = (values.services || []).filter(
         (service) => service?.service_name && service?.price_rub,
       );
-      const availableBonuses = codeSearchResult.loyalty_bonuses || 0;
 
       const payload = {};
       const messages = [];
@@ -169,25 +191,8 @@ const UsersPage = () => {
         messages.push(`Начислено ${bonusesToAward} бонусов (${cashbackPercent}% от ${totalCost} ₽)`);
       }
 
-      // 2. Списание бонусов (скидка)
-      if (values.bonuses_delta !== undefined && values.bonuses_delta !== null && values.bonuses_delta !== '') {
-        const bonusesToSpend = parseInt(values.bonuses_delta, 10);
-        if (isNaN(bonusesToSpend) || bonusesToSpend <= 0) {
-          message.error('Количество бонусов для списания должно быть больше нуля');
-          return;
-        }
-
-        if (bonusesToSpend > availableBonuses) {
-          message.error(`Недостаточно бонусов. Доступно ${availableBonuses}, требуется ${bonusesToSpend}`);
-          return;
-        }
-
-        payload.bonuses_delta = -bonusesToSpend;
-        messages.push(`Списано ${bonusesToSpend} бонусов (скидка)`);
-      }
-
-      if (!payload.services && !payload.bonuses_delta) {
-        message.error('Укажите услуги для начисления бонусов или количество бонусов для списания');
+      if (!payload.services) {
+        message.error('Укажите услуги для начисления бонусов');
         return;
       }
 
@@ -198,9 +203,6 @@ const UsersPage = () => {
       const successMessages = [];
       if (result.bonuses_awarded > 0) {
         successMessages.push(`Начислено ${result.bonuses_awarded} бонусов`);
-      }
-      if (result.bonuses_spent > 0) {
-        successMessages.push(`Списано ${result.bonuses_spent} бонусов`);
       }
       message.success(successMessages.join(' | '));
       
@@ -266,7 +268,7 @@ const UsersPage = () => {
       sorter: true,
       render: (value) => value ? dayjs(value).tz('Europe/Moscow').format('DD.MM.YYYY') : '—',
     },
-  ], [filters]);
+  ], []);
 
   const handleTableChange = (paginationConfig, _filters, sorter) => {
     const { current, pageSize } = paginationConfig;
@@ -300,8 +302,25 @@ const UsersPage = () => {
     setAdjustModalOpen(false);
   };
 
+  if (!isSuperAdmin) {
+    return (
+      <Card>
+        <Typography.Text>
+          Доступ к управлению пользователями есть только у супер-администраторов.
+        </Typography.Text>
+      </Card>
+    );
+  }
+
   return (
-    <Card title="Пользователи">
+    <Card
+      title="Пользователи"
+      extra={(
+        <Button onClick={handleExport} loading={exportLoading}>
+          Выгрузить в Excel
+        </Button>
+      )}
+    >
       <Space style={{ marginBottom: 16 }} wrap>
         <Input.Search
           allowClear
@@ -429,7 +448,7 @@ const UsersPage = () => {
                 block
                 style={{ borderColor: '#1890ff', color: '#1890ff' }}
               >
-                Списать бонусы по коду из профиля
+                Начислить бонусы по коду из профиля
               </Button>
             </Space>
 
@@ -485,6 +504,10 @@ const UsersPage = () => {
             if (!selectedUser) return;
             try {
               setAdjustLoading(true);
+              if ((values.bonuses_delta ?? 0) < 0) {
+                message.error('Списание бонусов отключено. Укажите неотрицательное значение.');
+                return;
+              }
               const payload = {
                 bonuses_delta: values.bonuses_delta,
                 reason: values.reason || null,
@@ -507,11 +530,12 @@ const UsersPage = () => {
           <Form.Item
             label="Изменение бонусов"
             name="bonuses_delta"
-            rules={[{ required: true, message: 'Укажите изменение бонусов (можно отрицательное)' }]}
+            rules={[{ required: true, message: 'Укажите количество бонусов для начисления' }]}
           >
             <InputNumber
               style={{ width: '100%' }}
-              placeholder="Например, 50 или -20"
+              min={0}
+              placeholder="Например, 50"
             />
           </Form.Item>
           <Form.Item
@@ -523,9 +547,9 @@ const UsersPage = () => {
         </Form>
       </Modal>
 
-      {/* Модальное окно для поиска по коду и списания бонусов */}
+      {/* Модальное окно для поиска по коду и начисления бонусов */}
       <Modal
-        title="Списать бонусы по коду пользователя"
+        title="Начислить бонусы по коду пользователя"
         open={codeSearchModalOpen}
         onCancel={() => {
           setCodeSearchModalOpen(false);
@@ -538,7 +562,7 @@ const UsersPage = () => {
         <Form
           form={codeSearchForm}
           layout="vertical"
-          onFinish={codeSearchResult ? handleSpendBonusesByCode : handleCodeSearch}
+          onFinish={codeSearchResult ? handleAwardBonusesByCode : handleCodeSearch}
         >
           {!codeSearchResult ? (
             <>
@@ -581,32 +605,6 @@ const UsersPage = () => {
                   </Descriptions.Item>
                 </Descriptions>
               </Card>
-              <Form.Item
-                name="bonuses_delta"
-                label="Количество бонусов для списания"
-                extra="Это скидка, которую получает пользователь. Можно оставить пустым, если нужно только начислить бонусы за услуги."
-                rules={[
-                  {
-                    validator: (_, value) => {
-                      if (!value) {
-                        return Promise.resolve();
-                      }
-                      if (value <= 0) {
-                        return Promise.reject(new Error('Минимум 1 бонус'));
-                      }
-                      return Promise.resolve();
-                    },
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={1}
-                  max={codeSearchResult.loyalty_bonuses || 0}
-                  style={{ width: '100%' }}
-                  placeholder="Сколько бонусов списать (скидка)?"
-                  size="large"
-                />
-              </Form.Item>
               <Form.List name="services">
                 {(fields, { add, remove }) => (
                   <>
@@ -659,8 +657,7 @@ const UsersPage = () => {
                     </Button>
                     {fields.length > 0 && (
                       <Typography.Text type="secondary">
-                        Бонусы будут начислены автоматически по проценту уровня пользователя ({cashbackPercent}%).
-                        Поле «Количество бонусов для списания» можно не заполнять, если нужно только начислить.
+                        Бонусы начисляются автоматически по проценту уровня пользователя ({cashbackPercent}%).
                       </Typography.Text>
                     )}
                   </>
@@ -679,15 +676,13 @@ const UsersPage = () => {
                   <Button
                     onClick={() => {
                       setCodeSearchResult(null);
-                      codeSearchForm.resetFields(['bonuses_delta', 'reason', 'services']);
+                      codeSearchForm.resetFields(['reason', 'services']);
                     }}
                   >
                     Найти другого пользователя
                   </Button>
                   <Button type="primary" htmlType="submit" loading={adjustLoading} block>
-                    {servicesTotal > 0 || codeSearchForm.getFieldValue('bonuses_delta') 
-                      ? 'Применить изменения' 
-                      : 'Списать бонусы'}
+                    Начислить бонусы
                   </Button>
                 </Space>
               </Form.Item>
@@ -700,4 +695,3 @@ const UsersPage = () => {
 };
 
 export default UsersPage;
-

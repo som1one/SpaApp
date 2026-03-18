@@ -44,6 +44,23 @@ class LoyaltyInfoResponse(BaseModel):
     levels: List[LoyaltyLevelResponse] = []  # Все активные уровни
 
 
+class LoyaltyTransactionResponse(BaseModel):
+    id: int
+    amount: int
+    transaction_type: str
+    status: str
+    title: str
+    description: Optional[str] = None
+    reason: Optional[str] = None
+    expires_at: Optional[str] = None
+    expired_at: Optional[str] = None
+    created_at: str
+
+
+class LoyaltyHistoryResponse(BaseModel):
+    items: List[LoyaltyTransactionResponse] = []
+
+
 class LoyaltyLevelCreate(BaseModel):
     name: str
     min_bonuses: int  # Минимальное количество бонусов для уровня
@@ -84,3 +101,18 @@ class LoyaltyBonusUpdate(BaseModel):
     order_index: Optional[int] = None
     is_active: Optional[bool] = None
 
+
+class LoyaltySettingsResponse(BaseModel):
+    loyalty_enabled: bool
+    points_per_100_rub: int
+    welcome_bonus_amount: int
+    bonus_expiry_days: int
+    yclients_bonus_field_id: Optional[str] = None
+
+
+class LoyaltySettingsUpdate(BaseModel):
+    points_per_100_rub: Optional[int] = None
+    loyalty_enabled: Optional[bool] = None
+    welcome_bonus_amount: Optional[int] = None
+    bonus_expiry_days: Optional[int] = None
+    yclients_bonus_field_id: Optional[str] = None

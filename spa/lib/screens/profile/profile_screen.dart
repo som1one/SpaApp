@@ -31,6 +31,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  static const String _adminSupportName = 'Макс';
+  static const String _adminSupportPhone = '+79006870737';
+  static const String _adminSupportPhoneDisplay = '+7 900 687-07-37';
+
   final _apiService = ApiService();
   final _authService = AuthService();
   final _userService = UserService();
@@ -52,6 +56,183 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _hasCheckedInitialRefresh = false;
   DateTime? _lastBookingUpdate;
 
+  Future<void> _openDialer(String phone) async {
+    final uri = Uri.parse('tel:$phone');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Не удалось открыть приложение телефона')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ошибка при попытке звонка')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showSupportSheet() async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Тех поддержка',
+                style: AppTextStyles.heading3.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Контакт: $_adminSupportName',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _adminSupportPhoneDisplay,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _openDialer(_adminSupportPhone);
+                  },
+                  icon: const Icon(Icons.call_outlined),
+                  label: const Text('Позвонить в администрацию'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditProfileSheet() async {
+    final user = _user;
+    if (user == null || !mounted) return;
+
+    final nameController = TextEditingController(text: user.name);
+    final surnameController = TextEditingController(text: user.surname ?? '');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            16 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Данные профиля',
+                style: AppTextStyles.heading3.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Имя',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: surnameController,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Фамилия',
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    final surname = surnameController.text.trim();
+
+                    if (name.length < 2) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Имя должно быть не короче 2 символов'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      final updated = await _userService.updateProfile(
+                        name: name,
+                        surname: surname,
+                      );
+                      if (!mounted) return;
+                      if (updated != null) {
+                        setState(() => _user = updated);
+                      }
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Профиль обновлён')),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(getErrorMessage(e)),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Сохранить'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -64,14 +245,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } else {
       // Обновляем записи при возврате на экран (но не слишком часто)
       final now = DateTime.now();
-      if (_lastBookingUpdate == null || 
+      if (_lastBookingUpdate == null ||
           now.difference(_lastBookingUpdate!).inSeconds > 2) {
         _lastBookingUpdate = now;
         _loadBookings();
       }
     }
   }
-
 
   Future<void> _loadProfile() async {
     setState(() {
@@ -143,8 +323,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
 
         final response = await _apiService.get('/bookings');
-        final List<dynamic> bookingsData = response is List 
-            ? response 
+        final List<dynamic> bookingsData = response is List
+            ? response
             : (response['bookings'] as List<dynamic>? ?? []);
 
         apiBookings = bookingsData
@@ -157,9 +337,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Загружаем локальные записи
       final localBookingsData = await _localBookingService.getLocalBookings();
-      final localBookings = localBookingsData
-          .map((json) => Booking.fromJson(json))
-          .toList();
+      final localBookings =
+          localBookingsData.map((json) => Booking.fromJson(json)).toList();
 
       // Объединяем записи
       final allBookings = [...apiBookings, ...localBookings];
@@ -202,80 +381,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ConnectivityWrapper(
       onRetry: _loadProfile,
       child: Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Профиль',
-              style: AppTextStyles.heading3.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-                fontSize: 22,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          centerTitle: true,
+          title: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Профиль',
+                style: AppTextStyles.heading3.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  fontSize: 22,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          toolbarHeight: 88,
         ),
-        toolbarHeight: 88,
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: AnimatedStateSwitcher(
-          child: _isLoading
-              ? _buildSkeletonLoader()
-              : _error != null
-                  ? FadeInWidget(
-                      child: _buildErrorState(),
-                    )
-                  : RefreshIndicator(
-                    onRefresh: _loadProfile,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 16),
-                          _ProfileHeaderCard(user: _user),
-                          const SizedBox(height: 16),
-                          _ContactInfoCard(),
-                          const SizedBox(height: 16),
-                          if (_loyaltyInfo != null) _LoyaltyCard(loyaltyInfo: _loyaltyInfo!),
-                          if (_loyaltyInfo != null) const SizedBox(height: 24),
-                          _UpcomingBookingsSection(
-                            isLoading: _isLoadingBookings,
-                            bookings: _bookings,
-                            onBookingCancelled: () {
-                              _loadBookings();
-                            },
+        body: SafeArea(
+          bottom: false,
+          child: AnimatedStateSwitcher(
+            child: _isLoading
+                ? _buildSkeletonLoader()
+                : _error != null
+                    ? FadeInWidget(
+                        child: _buildErrorState(),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadProfile,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
+                              _ProfileHeaderCard(
+                                user: _user,
+                                onEdit: _showEditProfileSheet,
+                              ),
+                              const SizedBox(height: 16),
+                              _ContactInfoCard(),
+                              const SizedBox(height: 16),
+                              if (_loyaltyInfo != null)
+                                _LoyaltyCard(loyaltyInfo: _loyaltyInfo!),
+                              if (_loyaltyInfo != null)
+                                const SizedBox(height: 24),
+                              _UpcomingBookingsSection(
+                                isLoading: _isLoadingBookings,
+                                bookings: _bookings,
+                                onBookingCancelled: () {
+                                  _loadBookings();
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              _QuickLinks(
+                                onSettings: () => Navigator.of(context)
+                                    .pushNamed(RouteNames.settings),
+                                onSupport: _showSupportSheet,
+                              ),
+                              const SizedBox(height: 100),
+                            ],
                           ),
-                          const SizedBox(height: 24),
-                          _QuickLinks(
-                            onSettings: () => Navigator.of(context).pushNamed(RouteNames.settings),
-                            onSupport: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Скоро добавим поддержку прямо в приложении')),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 100),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+          ),
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: AppBottomNav(
-          current: BottomNavItem.profile,
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: AppBottomNav(
+            current: BottomNavItem.profile,
+          ),
         ),
-      ),
       ),
     );
   }
@@ -329,27 +510,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.person_outline, size: 64, color: AppColors.textSecondary),
+              Icon(Icons.person_outline,
+                  size: 64, color: AppColors.textSecondary),
               const SizedBox(height: 16),
               Text(
                 'Вам нужно войти',
-                style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimary),
+                style: AppTextStyles.heading3
+                    .copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: 8),
               Text(
                 'Для доступа к профилю необходимо войти или зарегистрироваться',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pushReplacementNamed(RouteNames.registration);
+                  Navigator.of(context)
+                      .pushReplacementNamed(RouteNames.registration);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.buttonPrimary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -379,12 +565,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             Text(
               'Ошибка загрузки профиля',
-              style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimary),
+              style:
+                  AppTextStyles.heading3.copyWith(color: AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
               _error ?? 'Попробуйте повторить позже',
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -570,9 +758,11 @@ class _SocialButton extends StatelessWidget {
 
 class _ProfileHeaderCard extends StatelessWidget {
   final User? user;
+  final VoidCallback onEdit;
 
   const _ProfileHeaderCard({
     required this.user,
+    required this.onEdit,
   });
 
   @override
@@ -599,7 +789,8 @@ class _ProfileHeaderCard extends StatelessWidget {
                 height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFFFC1CC), width: 2.5),
+                  border:
+                      Border.all(color: const Color(0xFFFFC1CC), width: 2.5),
                 ),
                 child: ClipOval(
                   child: resolved != null && resolved.isNotEmpty
@@ -656,12 +847,24 @@ class _ProfileHeaderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  user?.fullName ?? 'Гость',
-                  style: AppTextStyles.heading4.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        user?.fullName ?? 'Гость',
+                        style: AppTextStyles.heading4.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      color: AppColors.textSecondary,
+                      onPressed: user == null ? null : onEdit,
+                      tooltip: 'Редактировать',
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -673,7 +876,8 @@ class _ProfileHeaderCard extends StatelessWidget {
                 if (user?.uniqueCode != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppColors.primaryWithOpacity10,
                       borderRadius: BorderRadius.circular(12),
@@ -745,13 +949,13 @@ class _LoyaltyCard extends StatelessWidget {
     if (rubles < 200000) return 3;
     return 4;
   }
-  
+
   // Форматирование рублей
   String _formatRub(int amount) {
     final formatter = NumberFormat.decimalPattern('ru');
     return '${formatter.format(amount)} ₽';
   }
-  
+
   // Получить градиент для уровня на основе цветов приложения
   LinearGradient _getLevelGradient(int levelNum) {
     switch (levelNum) {
@@ -787,10 +991,11 @@ class _LoyaltyCard extends StatelessWidget {
         );
     }
   }
-  
+
   Color _parseColor(String hex) {
     try {
-      return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
+      return Color(
+          int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
     } catch (e) {
       return AppColors.buttonPrimary;
     }
@@ -801,24 +1006,27 @@ class _LoyaltyCard extends StatelessWidget {
     final currentLevel = loyaltyInfo.currentLevel;
     final nextLevel = loyaltyInfo.nextLevel;
     final currentBonuses = loyaltyInfo.currentBonuses;
-    
+
     if (currentLevel == null) {
       return const SizedBox.shrink();
     }
 
     // Используем данные из бэкенда (уже рассчитаны по потраченным рублям)
-    final bonusesToNext = loyaltyInfo.bonusesToNext; // Это рубли до следующего уровня
+    final bonusesToNext =
+        loyaltyInfo.bonusesToNext; // Это рубли до следующего уровня
     final progress = loyaltyInfo.progress;
     final levelName = currentLevel.name;
-    
+
     // Определяем номер уровня из имени (0, 1, 2, 3, 4) или по minBonuses
-    final levelNum = int.tryParse(levelName) ?? _getLevelNumber(currentLevel.minBonuses);
-    
+    final levelNum =
+        int.tryParse(levelName) ?? _getLevelNumber(currentLevel.minBonuses);
+
     String statusText = 'Уровень $levelName';
     String subtitleText = '';
 
     if (nextLevel != null && bonusesToNext > 0) {
-      subtitleText = 'Потратить ещё ${_formatRub(bonusesToNext)} до Уровня ${nextLevel.name}';
+      subtitleText =
+          'Потратить ещё ${_formatRub(bonusesToNext)} до Уровня ${nextLevel.name}';
     } else if (nextLevel == null) {
       subtitleText = 'Вы на максимальном уровне';
     } else {
@@ -923,7 +1131,8 @@ class _UpcomingBookingsSection extends StatefulWidget {
   });
 
   @override
-  State<_UpcomingBookingsSection> createState() => _UpcomingBookingsSectionState();
+  State<_UpcomingBookingsSection> createState() =>
+      _UpcomingBookingsSectionState();
 }
 
 class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
@@ -998,14 +1207,14 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
     try {
       // Отменяем локально (без API)
       await _localBookingService.cancelBooking(booking.id);
-      
+
       // Если это локальная запись (отрицательный ID), удаляем её
       if (booking.id < 0) {
         await _localBookingService.deleteLocalBooking(booking.id);
       }
 
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Бронирование отменено'),
@@ -1029,9 +1238,10 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
   @override
   Widget build(BuildContext context) {
     final futureBookings = widget.bookings
-        .where((b) => b.appointmentDateTime.isAfter(DateTime.now()) && 
-                     b.status != 'cancelled' && 
-                     b.status != 'completed')
+        .where((b) =>
+            b.appointmentDateTime.isAfter(DateTime.now()) &&
+            b.status != 'cancelled' &&
+            b.status != 'completed')
         .toList()
       ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
 
@@ -1062,7 +1272,8 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
                   Navigator.of(context).pushNamed(RouteNames.bookings);
                 },
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -1112,7 +1323,8 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
                   },
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF7F7F2),
                       borderRadius: BorderRadius.circular(18),
@@ -1138,28 +1350,28 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
                                   fontSize: 16,
                                 ),
                               ),
-                            if (booking.masterName != null &&
-                                booking.masterName!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.person_outline,
-                                    size: 14,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      'Мастер: ${booking.masterName}',
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        color: AppColors.textSecondary,
+                              if (booking.masterName != null &&
+                                  booking.masterName!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person_outline,
+                                      size: 14,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'Мастер: ${booking.masterName}',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 6),
                               Text(
                                 _formatDateTime(booking.appointmentDateTime),
@@ -1175,7 +1387,8 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
                           TextButton(
                             onPressed: () => _cancelBooking(booking),
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
@@ -1244,7 +1457,8 @@ class _QuickLinks extends StatelessWidget {
         const SizedBox(height: 12),
         _QuickLinkTile(
           icon: Icons.help_outline,
-          title: 'Помощь и поддержка',
+          title: 'Тех поддержка',
+          subtitle: 'Макс · +7 900 687-07-37',
           onTap: onSupport,
         ),
       ],
@@ -1255,11 +1469,13 @@ class _QuickLinks extends StatelessWidget {
 class _QuickLinkTile extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String? subtitle;
   final VoidCallback onTap;
 
   const _QuickLinkTile({
     required this.icon,
     required this.title,
+    this.subtitle,
     required this.onTap,
   });
 
@@ -1301,13 +1517,29 @@ class _QuickLinkTile extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  title,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 16,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(width: 8),

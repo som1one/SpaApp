@@ -4,7 +4,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import auth, bookings, services
-from app.api.v1 import admin_auth, admin_dashboard, admin_menu, admin_users, admin_bookings, admin_audit, admin_notifications, devices, menu_public, loyalty_public, admin_loyalty, yclients, booking, admin_staff, admin_custom_content, custom_content_public
+from app.api.v1 import admin_auth, admin_dashboard, admin_menu, admin_users, admin_bookings, admin_audit, admin_notifications, devices, menu_public, loyalty_public, admin_loyalty, yclients, booking, admin_staff, admin_custom_content, custom_content_public, config_public
 
 api_router = APIRouter()
 
@@ -102,5 +102,9 @@ api_router.include_router(
 api_router.include_router(
     custom_content_public.router,
     tags=["Custom Content"]
+)
+
+api_router.include_router(
+    config_public.router,
 )
 

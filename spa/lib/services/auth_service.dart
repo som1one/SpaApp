@@ -1,14 +1,13 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 import 'push_service.dart';
 
 class AuthService {
-  static const String _googleServerClientId =
-      '7382336719-45c766fmger26j5c2gbrgil47a95rf6g.apps.googleusercontent.com';
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
@@ -19,7 +18,6 @@ class AuthService {
   final _storageService = StorageService();
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email'],
-    serverClientId: _googleServerClientId,
   );
 
   bool get isAuthenticated => _isAuthenticated;
@@ -34,7 +32,7 @@ class AuthService {
         'email': email,
         'password': password,
       });
-      
+
       _token = response['access_token'];
       if (_token == null || _token!.isEmpty) {
         throw Exception('Токен не получен от сервера');
@@ -42,7 +40,11 @@ class AuthService {
       _apiService.token = _token;
       _isAuthenticated = true;
       await _storageService.saveToken(_token!);
-      
+
+      if (Firebase.apps.isNotEmpty) {
+        unawaited(PushService().init());
+      }
+
       return true;
     } catch (e) {
       _isAuthenticated = false;
@@ -72,13 +74,13 @@ class AuthService {
         'phone': phone,
         'code': code,
       };
-      
-      final response = await _apiService.post('/auth/register', requestData);
-      
+
+      await _apiService.post('/auth/register', requestData);
+
       // После успешной регистрации нужно войти, чтобы получить токен
       // Выполняем автоматический вход
       final loginSuccess = await login(email, password);
-      
+
       if (loginSuccess) {
         return true;
       } else {
@@ -111,15 +113,6 @@ class AuthService {
       _token = storedToken;
       _apiService.token = _token;
       _isAuthenticated = true;
-      // После восстановления сессии можно синхронизировать push-токен
-      // Проверяем, что Firebase инициализирован перед вызовом PushService
-      try {
-        if (Firebase.apps.isNotEmpty) {
-          await PushService().init();
-        }
-      } catch (e) {
-        debugPrint('⚠️ Ошибка инициализации PushService в restoreSession: $e');
-      }
     }
   }
 
@@ -127,14 +120,14 @@ class AuthService {
     try {
       // Запускаем Google Sign-In
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
         // Пользователь отменил вход
         return false;
       }
 
       // Получаем auth детали от Google
-      final GoogleSignInAuthentication googleAuth = 
+      final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
       // Создаем credential
@@ -144,12 +137,12 @@ class AuthService {
       );
 
       // Входим в Firebase
-      final UserCredential userCredential = 
+      final UserCredential userCredential =
           await _firebaseAuth.signInWithCredential(credential);
 
       // Получаем токен для вашего бэкенда
       final idToken = await userCredential.user?.getIdToken();
-      
+
       if (idToken != null && userCredential.user != null) {
         // Отправляем токен на ваш бэкенд для создания/обновления пользователя
         final user = userCredential.user!;
@@ -167,10 +160,14 @@ class AuthService {
         _apiService.token = _token;
         _isAuthenticated = true;
         await _storageService.saveToken(_token!);
-        
+
+        if (Firebase.apps.isNotEmpty) {
+          unawaited(PushService().init());
+        }
+
         return true;
       }
-      
+
       return false;
     } catch (e) {
       print('Ошибка Google Sign-In: $e');
@@ -192,7 +189,9 @@ class AuthService {
   /// Использует WebView для OAuth авторизации
   Future<bool> signInWithVK({
     required String vkAppId,
-    required Function(String accessToken, int userId, String? email, String? firstName, String? lastName, String? photoUrl) onSuccess,
+    required Function(String accessToken, int userId, String? email,
+            String? firstName, String? lastName, String? photoUrl)
+        onSuccess,
   }) async {
     try {
       // Этот метод будет вызываться из WebView после успешной авторизации
@@ -231,7 +230,7 @@ class AuthService {
       _apiService.token = _token;
       _isAuthenticated = true;
       await _storageService.saveToken(_token!);
-      
+
       return true;
     } catch (e) {
       print('Ошибка обработки VK данных: $e');
@@ -243,4 +242,3 @@ class AuthService {
     }
   }
 }
-

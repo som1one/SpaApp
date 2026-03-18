@@ -70,15 +70,22 @@ class YClientsService:
             )
             raise ValueError("YClients user token is empty. Check configuration.")
 
-        # Формируем заголовки согласно документации YClients
-        # Authorization: Bearer {api_token}
-        # User-Token: {user_token} (отдельный заголовок) - ИЛИ в URL параметрах
-        auth_header = f"Bearer {api_token_str}"
+        # Формируем заголовки под актуальный формат YClients.
+        # Рабочий вариант для API v1:
+        # Authorization: Bearer {partner_token}, User {user_token}
+        #
+        # Ранее использовали отдельный заголовок User-Token, но для части методов
+        # он перестал распознаваться и API отвечает:
+        # "Не указан идентификатор пользователя".
+        if include_user_token_in_header:
+            auth_header = f"Bearer {api_token_str}, User {user_token_str}"
+        else:
+            auth_header = f"Bearer {api_token_str}"
 
         # Жёстко валидируем, что заголовок можно закодировать в ASCII (требование HTTP)
         try:
             auth_header.encode("ascii")
-            if user_token_str:
+            if user_token_str and include_user_token_in_header:
                 user_token_str.encode("ascii")
         except UnicodeEncodeError as e:
             # Находим проблемные символы для наглядной диагностики
@@ -118,7 +125,8 @@ class YClientsService:
             "Content-Type": "application/json",
         }
         
-        # User-Token может быть в заголовках ИЛИ в URL параметрах
+        # Дублируем User-Token для обратной совместимости (старые схемы).
+        # Основной источник user token теперь — Authorization.
         if include_user_token_in_header and user_token_str:
             headers["User-Token"] = user_token_str
         
@@ -1205,7 +1213,106 @@ class YClientsService:
         
         return result
 
+    @staticmethod
+    def _normalize_phone_for_client_lookup(phone: Optional[str]) -> Optional[str]:
+        if not phone:
+            return None
+        digits = "".join(ch for ch in phone if ch.isdigit())
+        if not digits:
+            return None
+        if len(digits) == 11 and digits.startswith("8"):
+            digits = f"7{digits[1:]}"
+        return digits
+
+    def find_client(self, phone: Optional[str] = None, email: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Найти клиента в YClients по телефону или email."""
+        if not self.company_id or not self.api_token or not self.user_token:
+            return None
+
+        candidates = []
+        normalized_phone = self._normalize_phone_for_client_lookup(phone)
+        if normalized_phone:
+            candidates.append({"phone": normalized_phone})
+        if email:
+            candidates.append({"email": email.strip()})
+
+        with httpx.Client(timeout=15.0) as client:
+            for params in candidates:
+                response = client.get(
+                    f"{self.BASE_URL}/clients/{self.company_id}",
+                    headers=self._get_headers(),
+                    params=params,
+                )
+                response.raise_for_status()
+                payload = response.json()
+                data = payload.get("data") or []
+                if data:
+                    return data[0]
+        return None
+
+    def get_client(self, client_id: int) -> Optional[Dict[str, Any]]:
+        """Получить детальную карточку клиента YClients."""
+        if not self.company_id or not self.api_token or not self.user_token:
+            return None
+
+        with httpx.Client(timeout=15.0) as client:
+            response = client.get(
+                f"{self.BASE_URL}/client/{self.company_id}/{client_id}",
+                headers=self._get_headers(),
+            )
+            response.raise_for_status()
+            payload = response.json()
+            return payload.get("data")
+
+    def update_client_bonus_field(self, client_id: int, field_id: str, balance: int) -> bool:
+        """Обновить кастомное поле клиента текущим бонусным балансом."""
+        client_data = self.get_client(client_id)
+        if not client_data:
+            return False
+
+        custom_fields = dict(client_data.get("custom_fields") or {})
+        custom_fields[str(field_id)] = str(balance)
+
+        payload = {
+            "name": client_data.get("name") or client_data.get("display_name") or "Клиент",
+            "phone": client_data.get("phone") or "",
+            "email": client_data.get("email") or "",
+            "comment": client_data.get("comment") or "",
+            "custom_fields": custom_fields,
+        }
+
+        with httpx.Client(timeout=15.0) as client:
+            response = client.put(
+                f"{self.BASE_URL}/client/{self.company_id}/{client_id}",
+                headers=self._get_headers(),
+                json=payload,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            return bool(payload.get("success"))
+
+    def sync_bonus_balance_for_user(
+        self,
+        phone: Optional[str],
+        email: Optional[str],
+        balance: int,
+        field_id: str,
+    ) -> bool:
+        """Найти клиента и записать ему текущий бонусный баланс."""
+        client_data = self.find_client(phone=phone, email=email)
+        if not client_data:
+            logger.warning(
+                "Клиент YClients для синхронизации бонусов не найден",
+                extra={"phone": phone, "email": email},
+            )
+            return False
+
+        client_id = client_data.get("id")
+        if not client_id:
+            return False
+
+        return self.update_client_bonus_field(client_id=client_id, field_id=field_id, balance=balance)
+
 
 # Глобальный экземпляр сервиса
 yclients_service = YClientsService()
-

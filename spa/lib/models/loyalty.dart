@@ -1,7 +1,8 @@
 class LoyaltyLevel {
   final int id;
   final String name;
-  final int minBonuses; // Минимальная сумма потраченных рублей для уровня (в рублях)
+  final int
+      minBonuses; // Минимальная сумма потраченных рублей для уровня (в рублях)
   final int cashbackPercent;
   final String colorStart;
   final String colorEnd;
@@ -70,7 +71,8 @@ class LoyaltyInfo {
   final int spentBonuses; // Потраченные бонусы
   final LoyaltyLevel? currentLevel;
   final LoyaltyLevel? nextLevel;
-  final int bonusesToNext; // Рублей до следующего уровня (название поля для совместимости, но содержит рубли)
+  final int
+      bonusesToNext; // Рублей до следующего уровня (название поля для совместимости, но содержит рубли)
   final double progress;
   final List<LoyaltyBonus> availableBonuses;
   final List<LoyaltyLevel> levels;
@@ -99,14 +101,62 @@ class LoyaltyInfo {
       bonusesToNext: json['bonuses_to_next'] as int,
       progress: (json['progress'] as num).toDouble(),
       availableBonuses: (json['available_bonuses'] as List<dynamic>?)
-              ?.map((item) => LoyaltyBonus.fromJson(item as Map<String, dynamic>))
+              ?.map(
+                  (item) => LoyaltyBonus.fromJson(item as Map<String, dynamic>))
               .toList() ??
           [],
       levels: (json['levels'] as List<dynamic>?)
-              ?.map((item) => LoyaltyLevel.fromJson(item as Map<String, dynamic>))
+              ?.map(
+                  (item) => LoyaltyLevel.fromJson(item as Map<String, dynamic>))
               .toList() ??
           [],
     );
   }
 }
 
+class LoyaltyHistoryItem {
+  final int id;
+  final int amount;
+  final String transactionType;
+  final String status;
+  final String title;
+  final String? description;
+  final String? reason;
+  final DateTime createdAt;
+  final DateTime? expiresAt;
+  final DateTime? expiredAt;
+
+  LoyaltyHistoryItem({
+    required this.id,
+    required this.amount,
+    required this.transactionType,
+    required this.status,
+    required this.title,
+    this.description,
+    this.reason,
+    required this.createdAt,
+    this.expiresAt,
+    this.expiredAt,
+  });
+
+  bool get isPositive => amount > 0;
+
+  factory LoyaltyHistoryItem.fromJson(Map<String, dynamic> json) {
+    return LoyaltyHistoryItem(
+      id: json['id'] as int,
+      amount: json['amount'] as int? ?? 0,
+      transactionType: json['transaction_type'] as String? ?? '',
+      status: json['status'] as String? ?? 'active',
+      title: json['title'] as String? ?? 'Операция',
+      description: json['description'] as String?,
+      reason: json['reason'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      expiresAt: json['expires_at'] != null
+          ? DateTime.parse(json['expires_at'] as String)
+          : null,
+      expiredAt: json['expired_at'] != null
+          ? DateTime.parse(json['expired_at'] as String)
+          : null,
+    );
+  }
+}

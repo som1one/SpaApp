@@ -75,22 +75,31 @@ spa/lib/firebase_options.dart
 
 ---
 
-## 4. Server Key для бэкенда (push-рассылки)
+## 4. Бэкенд: отправка пушей (FCM v1 — рекомендуется)
 
 **Откуда:**  
-Firebase Console → **Project settings** → вкладка **Cloud Messaging**.
+Firebase Console → **Project settings** → вкладка **General** → **Project ID** (скопировать).  
+Затем вкладка **Service accounts** → **Generate new private key** — скачать JSON файл сервисного аккаунта.
 
-- В блоке **«Cloud Messaging API (Legacy)»** скопируйте **Server key** (длинная строка).
-- Если блока нет: перейдите в [Google Cloud Console](https://console.cloud.google.com/) → выберите тот же проект, что и в Firebase → **APIs & Services** → **Library** → найдите **Cloud Messaging API** → **Enable**. После этого Server key появится во вкладке Cloud Messaging в Firebase.
+**Куда положить:**
 
-**Куда положить:**  
-В `.env` бэкенда (в папке `backend/`):
+- **Вариант 1 (файл):** положите JSON в безопасное место на сервере и укажите путь в `.env`:
+  ```env
+  FCM_PROJECT_ID=ваш-project-id
+  GOOGLE_APPLICATION_CREDENTIALS=/путь/к/ключу.json
+  ```
+- **Вариант 2 (Docker/CI):** содержимое JSON одной строкой в `.env`:
+  ```env
+  FCM_PROJECT_ID=ваш-project-id
+  FCM_CREDENTIALS_JSON={"type":"service_account","project_id":"...",...}
+  ```
 
-```env
-FCM_SERVER_KEY=скопированный_server_key_без_пробелов
-```
+Перезапустите бэкенд. FCM v1 не требует включения Legacy API в Google Cloud.
 
-Перезапустите бэкенд после сохранения `.env`.
+### Альтернатива: Legacy Server Key
+
+Если у вас включён **Cloud Messaging API (Legacy)** в Google Cloud:  
+Firebase Console → **Project settings** → **Cloud Messaging** → блок **Cloud Messaging API (Legacy)** → **Server key** → в `.env`: `FCM_SERVER_KEY=...`
 
 ---
 
@@ -101,13 +110,14 @@ FCM_SERVER_KEY=скопированный_server_key_без_пробелов
 | `google-services.json` | Firebase → Project settings → Android app → скачать | `spa/android/app/google-services.json` |
 | `GoogleService-Info.plist` | Firebase → Project settings → iOS app → скачать | `spa/ios/Runner/` + добавить в target Runner |
 | `firebase_options.dart` | Команда `flutterfire configure` в папке `spa` | Создаётся в `spa/lib/firebase_options.dart` |
-| Server Key (FCM)       | Firebase → Project settings → Cloud Messaging | В `backend/.env` как `FCM_SERVER_KEY=...` |
+| FCM v1 (бэкенд)        | Project ID + Service account JSON (Project settings → Service accounts) | В `backend/.env`: `FCM_PROJECT_ID` + `GOOGLE_APPLICATION_CREDENTIALS` или `FCM_CREDENTIALS_JSON` |
+| Legacy Server Key     | Firebase → Project settings → Cloud Messaging (Legacy) | В `backend/.env` как `FCM_SERVER_KEY=...` (если не используете v1) |
 
 ---
 
 ## Дополнительно в Firebase Console
 
 - **Authentication** (Build → Authentication): включите способы входа (Email/Password, Google и т.д.), если используете авторизацию.
-- **Cloud Messaging**: для пушей достаточно добавить Android и iOS приложения и взять Server Key; отдельно включать FCM в консоли не нужно.
+- **Cloud Messaging**: для пушей достаточно добавить Android и iOS приложения; для бэкенда настройте FCM v1 (сервисный аккаунт) или Legacy Server Key.
 
-Подробный сценарий настройки и проверки — в **FIREBASE_SETUP.md** в этой же папке.
+Подробный сценарий — **FIREBASE_SETUP.md**. По платформам: **FIREBASE_IOS.md**, **FIREBASE_ANDROID.md**.

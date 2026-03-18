@@ -8,9 +8,16 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.models.booking import Booking, BookingStatus
-from app.models.loyalty import LoyaltyLevel, LoyaltyBonus
+from app.models.loyalty import LoyaltyLevel, LoyaltyBonus, LoyaltyTransaction
 from pydantic import BaseModel
-from app.schemas.loyalty import LoyaltyInfoResponse, LoyaltyLevelResponse, LoyaltyBonusResponse
+from app.schemas.loyalty import (
+    LoyaltyBonusResponse,
+    LoyaltyHistoryResponse,
+    LoyaltyInfoResponse,
+    LoyaltyLevelResponse,
+    LoyaltyTransactionResponse,
+)
+from app.services.loyalty_service import expire_loyalty_transactions
 
 router = APIRouter(prefix="/loyalty", tags=["Loyalty"])
 logger = logging.getLogger(__name__)
@@ -26,6 +33,10 @@ async def get_loyalty_info(
     db: Session = Depends(get_db),
 ):
     """Получить информацию о лояльности текущего пользователя"""
+    expire_loyalty_transactions(db, user)
+    db.commit()
+    db.refresh(user)
+
     bonuses = user.loyalty_bonuses or 0
     spent_bonuses = user.spent_bonuses or 0
     
@@ -160,6 +171,41 @@ async def get_loyalty_info(
     )
 
 
+@router.get("/history", response_model=LoyaltyHistoryResponse)
+async def get_loyalty_history(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Получить историю начислений и сгораний бонусов."""
+    expire_loyalty_transactions(db, user)
+    db.commit()
+    db.refresh(user)
+
+    transactions = (
+        db.query(LoyaltyTransaction)
+        .filter(LoyaltyTransaction.user_id == user.id)
+        .order_by(LoyaltyTransaction.created_at.desc(), LoyaltyTransaction.id.desc())
+        .all()
+    )
+
+    items = [
+        LoyaltyTransactionResponse(
+            id=item.id,
+            amount=item.amount,
+            transaction_type=item.transaction_type,
+            status=item.status,
+            title=item.title,
+            description=item.description,
+            reason=item.reason,
+            expires_at=item.expires_at.isoformat() if item.expires_at else None,
+            expired_at=item.expired_at.isoformat() if item.expired_at else None,
+            created_at=item.created_at.isoformat(),
+        )
+        for item in transactions
+    ]
+    return LoyaltyHistoryResponse(items=items)
+
+
 @router.patch("/auto-apply")
 async def update_auto_apply_loyalty(
     payload: UpdateAutoApplyRequest,
@@ -172,4 +218,3 @@ async def update_auto_apply_loyalty(
     db.refresh(user)
     logger.info("Обновлена настройка auto_apply_loyalty_points", extra={"user_id": user.id, "value": payload.auto_apply})
     return {"success": True, "auto_apply_loyalty_points": user.auto_apply_loyalty_points}
-

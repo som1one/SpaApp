@@ -4,10 +4,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 import 'routes/app_router.dart';
 import 'routes/route_names.dart';
-import 'services/auth_service.dart';
 import 'services/language_service.dart';
 import 'services/push_service.dart';
 import 'theme/app_theme.dart';
+
+const bool _forceBootDebugScreen = false;
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -31,9 +32,10 @@ class _MyAppState extends State<MyApp> {
     try {
       final locale = await LanguageService().getLocale();
       // Гарантируем, что по умолчанию используется русский
-      final finalLocale = locale.languageCode == 'ru' || locale.languageCode == 'en' 
-          ? locale 
-          : const Locale('ru');
+      final finalLocale =
+          locale.languageCode == 'ru' || locale.languageCode == 'en'
+              ? locale
+              : const Locale('ru');
       if (mounted) {
         setState(() {
           _locale = finalLocale;
@@ -61,6 +63,21 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (_forceBootDebugScreen) {
+      return const Directionality(
+        textDirection: TextDirection.ltr,
+        child: ColoredBox(
+          color: Colors.green,
+          child: Center(
+            child: Text(
+              'BOOT OK',
+              style: TextStyle(fontSize: 32, color: Colors.white),
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'SPA Salon',
@@ -91,6 +108,7 @@ class _MyAppState extends State<MyApp> {
         // Если не поддерживается, возвращаем русский
         return const Locale('ru');
       },
+      home: null,
       // Начинаем с registration, но пользователи могут продолжить как гости
       initialRoute: RouteNames.registration,
       onGenerateRoute: AppRouter.generateRoute,
@@ -98,15 +116,16 @@ class _MyAppState extends State<MyApp> {
       // Включаем поддержку высокой частоты обновления
       builder: (context, child) {
         // Если child null, показываем индикатор загрузки вместо белого экрана
-        final widget = child ?? const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-        
+        final widget = child ??
+            const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+
         // Определяем, является ли устройство iPad
         final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
-        
+
         return MediaQuery(
           // Принудительно устанавливаем частоту обновления для плавности
           data: MediaQuery.of(context).copyWith(
@@ -145,4 +164,3 @@ class LocalizationProvider extends InheritedWidget {
     return oldWidget.locale != locale;
   }
 }
-

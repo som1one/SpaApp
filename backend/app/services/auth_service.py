@@ -1,7 +1,6 @@
 """
 Сервис аутентификации - бизнес-логика
 """
-import secrets
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
@@ -11,6 +10,8 @@ from app.core.security import get_password_hash, verify_password, create_access_
 from app.core.config import settings
 from app.schemas.auth import RegisterRequest, LoginRequest
 from app.utils.email import send_verification_code
+from app.utils.user_code import ensure_user_unique_code
+from app.services.loyalty_service import grant_welcome_bonus
 
 
 class AuthService:
@@ -21,6 +22,7 @@ class AuthService:
         """Генерация случайного кода"""
         if length is None:
             length = settings.VERIFICATION_CODE_LENGTH
+        import secrets
         return ''.join([str(secrets.randbelow(10)) for _ in range(length)])
     
     @staticmethod
@@ -51,15 +53,6 @@ class AuthService:
         # а email сразу считаем подтверждённым.
         hashed_password = get_password_hash(request.password)
 
-        # Генерируем уникальный код пользователя (NOT NULL в БД, нужен для интеграций)
-        unique_code = None
-        for _ in range(10):  # до 10 попыток найти свободный код
-            candidate = secrets.token_urlsafe(6)[:8].upper().replace('-', '').replace('_', '')
-            exists = db.query(User).filter(User.unique_code == candidate).first()
-            if not exists:
-                unique_code = candidate
-                break
-
         user = User(
             name=request.name,
             surname=request.surname,
@@ -68,10 +61,14 @@ class AuthService:
             phone=request.phone,
             is_verified=True,
             is_active=True,
-            unique_code=unique_code,
         )
+        ensure_user_unique_code(db, user)
 
         db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        grant_welcome_bonus(db, user)
         db.commit()
         db.refresh(user)
         
@@ -125,6 +122,12 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Аккаунт неактивен"
             )
+
+        # Для старых аккаунтов, созданных до внедрения unique_code,
+        # автоматически создаём код при первом входе.
+        if ensure_user_unique_code(db, user):
+            db.commit()
+            db.refresh(user)
         
         # Создание токенов
         access_token = create_access_token(data={"sub": user.id})
@@ -197,4 +200,3 @@ class AuthService:
         return {
             "message": "Подтверждение email отключено, повторная отправка кода не требуется"
         }
-

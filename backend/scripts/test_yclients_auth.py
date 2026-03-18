@@ -27,7 +27,10 @@ def build_headers():
     return {
         "Content-Type": "application/json",
         "Accept": "application/vnd.api.v2+json",
-        "Authorization": f"Bearer {settings.YCLIENTS_API_TOKEN}",
+        # Актуальный формат авторизации YClients:
+        # Authorization: Bearer {partner_token}, User {user_token}
+        "Authorization": f"Bearer {settings.YCLIENTS_API_TOKEN}, User {settings.YCLIENTS_USER_TOKEN}",
+        # Дублируем для обратной совместимости.
         "User-Token": settings.YCLIENTS_USER_TOKEN,
     }
 

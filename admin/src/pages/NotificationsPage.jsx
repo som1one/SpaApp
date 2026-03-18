@@ -10,16 +10,17 @@ import {
   Space,
   Table,
   Tag,
+  Typography,
   message,
 } from 'antd';
 import dayjs from '../utils/dayjs';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   createNotification,
   fetchNotifications,
   updateNotificationStatus,
 } from '../api/notifications';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 const statusColors = {
   draft: 'default',
@@ -28,30 +29,38 @@ const statusColors = {
   cancelled: 'red',
 };
 
+const statusLabels = {
+  draft: 'Черновик',
+  scheduled: 'Запланировано',
+  sent: 'Отправлено',
+  cancelled: 'Отменено',
+};
+
+const categoryOptions = [
+  { value: 'general', label: 'Общее' },
+  { value: 'promo', label: 'Промо' },
+  { value: 'bookings', label: 'Записи' },
+  { value: 'loyalty', label: 'Лояльность' },
+  { value: 'news', label: 'Новости' },
+  { value: 'system', label: 'Системное' },
+];
+
 const NotificationsPage = () => {
   const { user } = useAuth();
-
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Управлять рассылками и уведомлениями могут только супер-администраторы.
-        </Typography.Text>
-      </Card>
-    );
-  }
+  const isSuperAdmin = user?.role === 'super_admin';
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ status: undefined });
+  const [filters, setFilters] = useState({ status: undefined, category: undefined });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [modalOpen, setModalOpen] = useState(false);
 
-  const load = async (params = {}) => {
+  const load = useCallback(async (params = {}) => {
     try {
       setLoading(true);
       const response = await fetchNotifications({
         status: params.status ?? filters.status,
+        category: params.category ?? filters.category,
         page: params.page ?? pagination.current,
         pageSize: params.pageSize ?? pagination.pageSize,
       });
@@ -62,11 +71,15 @@ const NotificationsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.status, filters.category, pagination]);
 
   useEffect(() => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
     load();
-  }, []);
+  }, [isSuperAdmin, load]);
 
   const handleStatusChange = async (record, status) => {
     try {
@@ -84,6 +97,11 @@ const NotificationsPage = () => {
       dataIndex: 'title',
     },
     {
+      title: 'Категория',
+      dataIndex: 'category',
+      render: (value) => categoryOptions.find((item) => item.value === value)?.label || 'Общее',
+    },
+    {
       title: 'Канал',
       dataIndex: 'channel',
       render: (value) => value.toUpperCase(),
@@ -96,13 +114,13 @@ const NotificationsPage = () => {
     {
       title: 'Запланировано',
       dataIndex: 'scheduled_at',
-      render: (value) => (value ? dayjs(value).tz('Europe/Moscow').format('DD MMM HH:mm') : '—'),
+      render: (value) => (value ? dayjs(value).tz('Asia/Kamchatka').format('DD MMM YYYY HH:mm') : '—'),
     },
     {
       title: 'Статус',
       dataIndex: 'status',
       render: (value) => (
-        <Tag color={statusColors[value] || 'default'}>{value}</Tag>
+        <Tag color={statusColors[value] || 'default'}>{statusLabels[value] || value}</Tag>
       ),
     },
     {
@@ -139,19 +157,31 @@ const NotificationsPage = () => {
   };
 
   const handleStatusFilter = (value) => {
-    setFilters({ status: value });
+    const nextFilters = { ...filters, status: value };
+    setFilters(nextFilters);
     setPagination((prev) => ({ ...prev, current: 1 }));
-    load({ status: value, page: 1 });
+    load({ ...nextFilters, page: 1 });
+  };
+
+  const handleCategoryFilter = (value) => {
+    const nextFilters = { ...filters, category: value };
+    setFilters(nextFilters);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+    load({ ...nextFilters, page: 1 });
   };
 
   const handleCreate = async (values) => {
     try {
+      const scheduledAt = values.scheduled_at
+        ? dayjs(values.scheduled_at).tz('Asia/Kamchatka', true).toISOString()
+        : null;
       await createNotification({
         title: values.title,
         message: values.message,
+        category: values.category,
         channel: values.channel,
         audience: values.audience,
-        scheduled_at: values.scheduled_at?.toISOString(),
+        scheduled_at: scheduledAt,
       });
       message.success('Кампания создана');
       setModalOpen(false);
@@ -160,6 +190,16 @@ const NotificationsPage = () => {
       message.error('Не удалось создать кампанию');
     }
   };
+
+  if (!isSuperAdmin) {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять рассылками и уведомлениями могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
 
   return (
     <Card
@@ -182,6 +222,13 @@ const NotificationsPage = () => {
             { value: 'cancelled', label: 'Отменено' },
           ]}
           style={{ width: 200 }}
+        />
+        <Select
+          allowClear
+          placeholder="Категория"
+          onChange={handleCategoryFilter}
+          options={categoryOptions}
+          style={{ width: 220 }}
         />
       </Space>
       <Table
@@ -211,6 +258,9 @@ const NotificationsPage = () => {
           <Form.Item label="Сообщение" name="message" rules={[{ required: true, message: 'Введите текст' }]}>
             <Input.TextArea rows={4} />
           </Form.Item>
+          <Form.Item label="Категория" name="category" initialValue="general">
+            <Select options={categoryOptions} />
+          </Form.Item>
           <Form.Item label="Канал" name="channel" initialValue="all">
             <Select
               options={[
@@ -230,7 +280,11 @@ const NotificationsPage = () => {
               ]}
             />
           </Form.Item>
-          <Form.Item label="Запланировать на" name="scheduled_at">
+          <Form.Item
+            label="Запланировать на (Камчатка, UTC+12)"
+            name="scheduled_at"
+            extra="Время интерпретируется по часовому поясу Камчатки."
+          >
             <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item>
@@ -248,4 +302,3 @@ const NotificationsPage = () => {
 };
 
 export default NotificationsPage;
-

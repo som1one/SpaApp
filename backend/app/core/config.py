@@ -119,6 +119,13 @@ class Settings(BaseSettings):
     LOYALTY_POINTS_PER_100_RUB: int = 5
     
     # Firebase / Push
+    # Вариант 1 (рекомендуется): FCM HTTP v1 API — сервисный аккаунт из Firebase Console
+    FCM_PROJECT_ID: str = ""
+    # Путь к JSON ключу сервисного аккаунта (или задайте GOOGLE_APPLICATION_CREDENTIALS в .env)
+    GOOGLE_APPLICATION_CREDENTIALS: str = ""
+    # Либо JSON сервисного аккаунта одной строкой (удобно для Docker): FCM_CREDENTIALS_JSON='{"type":"service_account",...}'
+    FCM_CREDENTIALS_JSON: str = ""
+    # Вариант 2 (устаревший): Legacy API — только если у вас включён Cloud Messaging API (Legacy)
     FCM_SERVER_KEY: str = ""
     FCM_API_URL: str = "https://fcm.googleapis.com/fcm/send"
     

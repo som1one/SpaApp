@@ -47,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<CustomContentBlock> _customBlocks = [];
   bool _isLoadingCustomBlocks = true;
   bool _hasCheckedBooking = false;
+  static const String _journeyBlockType = 'spa_travel';
 
   @override
   void initState() {
@@ -80,19 +81,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _checkPendingBooking() async {
     if (_hasCheckedBooking) return;
-    
+
     final pendingBooking = await _bookingTracker.getPendingBooking();
     if (pendingBooking == null || !mounted) return;
 
     _hasCheckedBooking = true;
-    
+
     // Небольшая задержка, чтобы UI успел загрузиться
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (!mounted) return;
 
     final serviceName = pendingBooking['service_name'] as String;
-    
+
     BookingConfirmationDialog.show(
       context: context,
       serviceName: serviceName,
@@ -102,9 +103,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-
-
-  Future<void> _handleBookingConfirmed(Map<String, dynamic> pendingBooking) async {
+  Future<void> _handleBookingConfirmed(
+      Map<String, dynamic> pendingBooking) async {
     try {
       final bookingDetails = await BookingDetailsSheet.show(
         context: context,
@@ -118,14 +118,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Создаем запись о бронировании локально (без API)
       // Используем выбранную дату и время, если указана, иначе текущая дата + 1 день, 10:00
       final now = DateTime.now();
-      final appointmentDate = bookingDetails.appointmentDateTime ?? DateTime(
-        now.year,
-        now.month,
-        now.day + 1,
-        10,
-        0,
-      );
-      
+      final appointmentDate = bookingDetails.appointmentDateTime ??
+          DateTime(
+            now.year,
+            now.month,
+            now.day + 1,
+            10,
+            0,
+          );
+
       final bookingData = {
         'user_id': _user?.id ?? 0,
         'service_name': bookingDetails.serviceName,
@@ -137,25 +138,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         'phone': _user?.phone,
       };
 
-      if (bookingDetails.masterName != null && bookingDetails.masterName!.isNotEmpty) {
+      if (bookingDetails.masterName != null &&
+          bookingDetails.masterName!.isNotEmpty) {
         bookingData['master_name'] = bookingDetails.masterName;
       }
 
       // Сохраняем локально
       await _localBookingService.saveLocalBooking(bookingData);
-      
+
       // Очищаем трекер
       await _bookingTracker.clearPendingBooking();
-      
+
       // Обновляем данные пользователя
       await _loadUser(forceRefresh: true);
-      
+
       // Показываем сообщение о том, что запись сохранена
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Запись сохранена локально! Вы можете посмотреть её в профиле.'),
+          content: const Text(
+              'Запись сохранена локально! Вы можете посмотреть её в профиле.'),
           backgroundColor: AppColors.success,
           duration: const Duration(seconds: 3),
           action: SnackBarAction(
@@ -169,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     } catch (e) {
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Ошибка при сохранении записи: ${getErrorMessage(e)}'),
@@ -216,12 +219,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         10,
         0,
       );
-      
+
       // Проверяем, что дата в будущем
       if (appointmentDate.isBefore(now)) {
         throw Exception('Неверная дата записи');
       }
-      
+
       final bookingData = {
         'service_name': pendingBooking['service_name'] as String,
         'appointment_datetime': appointmentDate.toIso8601String(),
@@ -231,12 +234,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       };
 
       await _apiService.post('/bookings', bookingData);
-      
+
       // Очищаем трекер
       await _bookingTracker.clearPendingBooking();
-      
+
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Информация об отмене сохранена'),
@@ -244,18 +247,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           duration: Duration(seconds: 2),
         ),
       );
-      
+
       // Обновляем данные пользователя
       await _loadUser(forceRefresh: true);
     } catch (e) {
       // Очищаем трекер даже при ошибке
       await _bookingTracker.clearPendingBooking();
-      
+
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Ошибка при сохранении информации об отмене: ${getErrorMessage(e)}'),
+          content: Text(
+              'Ошибка при сохранении информации об отмене: ${getErrorMessage(e)}'),
           backgroundColor: AppColors.error,
           duration: const Duration(seconds: 3),
         ),
@@ -270,7 +274,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _loadUser({bool forceRefresh = false}) async {
     try {
-      final user = await _userService.getCurrentUser(forceRefresh: forceRefresh);
+      final user =
+          await _userService.getCurrentUser(forceRefresh: forceRefresh);
       if (!mounted) return;
       setState(() {
         _user = user;
@@ -353,6 +358,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final journeyItems = _customBlocks
+        .where((b) => b.blockType == _journeyBlockType)
+        .map(
+          (b) => PopularJourneyItem(
+            title: b.title,
+            subtitle: (b.subtitle ?? '').trim(),
+            url: b.actionUrl,
+            imageUrl: b.imageUrl == null
+                ? null
+                : (Helpers.resolveImageUrl(b.imageUrl!) ?? b.imageUrl),
+          ),
+        )
+        .where((item) => item.title.trim().isNotEmpty)
+        .toList();
+
+    final contentBlocks =
+        _customBlocks.where((b) => b.blockType != _journeyBlockType).toList();
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
@@ -368,10 +391,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildTopSection(),
                 _buildLoyaltyCard(),
                 const SizedBox(height: 32),
-                const PopularJourneyCarousel(),
+                PopularJourneyCarousel(items: journeyItems),
                 const SizedBox(height: 32),
-                if (_customBlocks.isNotEmpty) ...[
-                  _buildCustomContentBlocks(),
+                if (contentBlocks.isNotEmpty) ...[
+                  _buildCustomContentBlocks(contentBlocks),
                   const SizedBox(height: 32),
                 ],
                 _buildActionButtons(),
@@ -584,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (bonuses < 200000) return 3;
     return 4;
   }
-  
+
   // Получить цвета градиента для уровня на основе цветов приложения
   List<Color> _getLevelGradientColors(int levelNum) {
     switch (levelNum) {
@@ -600,10 +623,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return [AppColors.primary, AppColors.primaryLight];
     }
   }
-  
+
   Color _parseLoyaltyColor(String hex) {
     try {
-      return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
+      return Color(
+          int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
     } catch (e) {
       return AppColors.buttonPrimary;
     }
@@ -784,7 +808,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            onPressed: () => _openExternalUrl('https://prirodaspa.ru/gift-sertificate'),
+            onPressed: () =>
+                _openExternalUrl('https://prirodaspa.ru/gift-sertificate'),
           ),
           const SizedBox(height: 16),
           _buildActionCard(
@@ -808,7 +833,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            onPressed: () => _openExternalUrl('https://priroda-therapy.ru/priroda-spa-catalog'),
+            onPressed: () => _openExternalUrl(
+                'https://priroda-therapy.ru/priroda-spa-catalog'),
           ),
         ],
       ),
@@ -925,7 +951,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildCustomContentBlocks() {
+  Widget _buildCustomContentBlocks(List<CustomContentBlock> blocks) {
     if (_isLoadingCustomBlocks) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 28),
@@ -933,7 +959,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    if (_customBlocks.isEmpty) {
+    if (blocks.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -941,7 +967,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _customBlocks.map((block) {
+        children: blocks.map((block) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: _buildCustomContentBlock(block),
@@ -1014,7 +1040,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: CachedNetworkImage(
-                  imageUrl: Helpers.resolveImageUrl(block.imageUrl!) ?? block.imageUrl!,
+                  imageUrl: Helpers.resolveImageUrl(block.imageUrl!) ??
+                      block.imageUrl!,
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,
@@ -1029,7 +1056,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     width: 80,
                     height: 80,
                     color: AppColors.borderLight,
-                    child: Icon(Icons.image_not_supported, color: AppColors.textMuted),
+                    child: Icon(Icons.image_not_supported,
+                        color: AppColors.textMuted),
                   ),
                 ),
               ),
@@ -1064,7 +1092,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                   ],
-                  if (block.description != null && block.description!.isNotEmpty) ...[
+                  if (block.description != null &&
+                      block.description!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
                       block.description!,
@@ -1095,7 +1124,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 child: Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: gradient != null ? AppColors.white : AppColors.buttonPrimary,
+                  color: gradient != null
+                      ? AppColors.white
+                      : AppColors.buttonPrimary,
                   size: 16,
                 ),
               ),
@@ -1108,10 +1139,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Color? _parseColor(String hex) {
     try {
-      return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
+      return Color(
+          int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
     } catch (e) {
       return null;
     }
   }
-
 }

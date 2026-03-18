@@ -27,7 +27,9 @@ async def test_current_token():
     url = f"https://api.yclients.com/api/v1/company/{settings.YCLIENTS_COMPANY_ID}/services"
     
     headers = {
-        "Authorization": f"Bearer {settings.YCLIENTS_API_TOKEN}",
+        "Authorization": (
+            f"Bearer {settings.YCLIENTS_API_TOKEN}, User {settings.YCLIENTS_USER_TOKEN}"
+        ),
         "User-Token": settings.YCLIENTS_USER_TOKEN,
         "Accept": "application/vnd.api.v2+json",
         "Content-Type": "application/json",
@@ -192,4 +194,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from contextlib import asynccontextmanager
 from datetime import datetime
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Rate limiting и фоновые задачи YClients временно отключены для упрощения отладки
 # from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -27,6 +28,7 @@ from datetime import datetime
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.services.admin_service import AdminService
+from app.services.notification_campaign_service import process_due_scheduled_campaigns
 from app.api.v1.router import api_router
 
 logging.basicConfig(
@@ -35,6 +37,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.info("Инициализация FastAPI приложения")
+scheduler: AsyncIOScheduler | None = None
 
 
 @asynccontextmanager
@@ -43,10 +46,35 @@ async def lifespan(app: FastAPI):
     # чтобы запуск и /health работали даже при упавшей БД или YClients.
     logger.info("Запуск приложения (lifespan старт)")
 
-    # Настраиваем APScheduler для автоматической синхронизации YClients
-    # Синхронизация записей отключена - записи не сохраняются в БД
+    global scheduler
+
+    async def _process_scheduled_notifications_job():
+        db = SessionLocal()
+        try:
+            processed = await process_due_scheduled_campaigns(db)
+            if processed:
+                logger.info("Обработано запланированных рассылок: %s", processed)
+        except Exception:
+            logger.error("Ошибка фоновой обработки запланированных рассылок", exc_info=True)
+        finally:
+            db.close()
+
+    scheduler = AsyncIOScheduler(timezone="Asia/Kamchatka")
+    scheduler.add_job(
+        _process_scheduled_notifications_job,
+        "interval",
+        minutes=1,
+        id="process_scheduled_notifications",
+        replace_existing=True,
+    )
+    scheduler.start()
+    logger.info("Планировщик запущен: обработка рассылок каждые 1 минуту (Asia/Kamchatka)")
 
     yield
+
+    if scheduler:
+        scheduler.shutdown(wait=False)
+        scheduler = None
 
     logger.info("Остановка приложения (lifespan shutdown)")
 
@@ -123,8 +151,10 @@ async def health_check():
     """Health check endpoint"""
     logger.info("Обработан запрос GET /health")
     from app.utils.timezone import moscow_now
+    from app.services.fcm_client import is_fcm_configured
+    fcm_configured = is_fcm_configured()
     return {
         "status": "healthy",
         "timestamp": moscow_now().isoformat(),
+        "push": {"fcm_configured": fcm_configured},
     }
-

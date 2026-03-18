@@ -18,6 +18,7 @@ from app.schemas.auth import (
 from app.services.auth_service import AuthService
 from app.services.storage_service import StorageService
 from app.models.user import User
+from app.utils.user_code import ensure_user_unique_code
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 optional_bearer = HTTPBearer(auto_error=False)
@@ -149,6 +150,7 @@ async def google_login(
                 is_active=True,
                 avatar_url=request.photo_url
             )
+            ensure_user_unique_code(db, user)
             db.add(user)
             db.commit()
             db.refresh(user)
@@ -165,6 +167,7 @@ async def google_login(
                 user.avatar_url = request.photo_url
 
             user.is_verified = True
+            ensure_user_unique_code(db, user)
             db.commit()
 
         access_token = create_access_token(data={"sub": user.id})
@@ -269,6 +272,7 @@ async def vk_login(
                 is_active=True,
                 avatar_url=photo_url
             )
+            ensure_user_unique_code(db, user)
             db.add(user)
             db.commit()
             db.refresh(user)
@@ -289,6 +293,7 @@ async def vk_login(
                 user.avatar_url = request.photo_url or vk_user.get("photo_200")
             
             user.is_verified = True
+            ensure_user_unique_code(db, user)
             db.commit()
         
         access_token = create_access_token(data={"sub": user.id})
@@ -349,6 +354,10 @@ async def get_current_user_info(
         logger.debug("Пользователь не найден по токену в /me, возвращаем гостя", extra={"user_id": user_id})
         return guest
 
+    if ensure_user_unique_code(db, user):
+        db.commit()
+        db.refresh(user)
+
     logger.debug("Запрос профиля", extra={"user_id": user.id})
     return {
         "id": user.id,
@@ -403,6 +412,12 @@ async def update_user_profile(
     db: Session = Depends(get_db),
 ):
     """Обновить профиль пользователя"""
+    if request.name is not None:
+        user.name = request.name
+
+    if request.surname is not None:
+        user.surname = request.surname
+
     if request.avatar_url is not None:
         user.avatar_url = request.avatar_url
     

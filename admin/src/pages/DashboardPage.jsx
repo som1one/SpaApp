@@ -145,7 +145,7 @@ const DashboardPage = () => {
     }
   };
 
-  const handleSpendBonuses = async (values) => {
+  const handleAwardBonuses = async (values) => {
     if (!codeSearchResult) {
       message.error('Сначала найдите пользователя по коду');
       return;
@@ -156,7 +156,6 @@ const DashboardPage = () => {
       const services = (values.services || []).filter(
         (service) => service?.service_name && service?.price_rub,
       );
-      const availableBonuses = codeSearchResult.loyalty_bonuses || 0;
 
       const payload = {};
       const messages = [];
@@ -180,25 +179,8 @@ const DashboardPage = () => {
         messages.push(`Начислено ${bonusesToAward} бонусов (${cashbackPercent}% от ${totalCost} ₽)`);
       }
 
-      // 2. Списание бонусов (скидка)
-      if (values.bonuses_delta !== undefined && values.bonuses_delta !== null && values.bonuses_delta !== '') {
-        const bonusesToSpend = parseInt(values.bonuses_delta, 10);
-        if (isNaN(bonusesToSpend) || bonusesToSpend <= 0) {
-          message.error('Количество бонусов для списания должно быть больше нуля');
-          return;
-        }
-
-        if (bonusesToSpend > availableBonuses) {
-          message.error(`Недостаточно бонусов. Доступно ${availableBonuses}, требуется ${bonusesToSpend}`);
-          return;
-        }
-
-        payload.bonuses_delta = -bonusesToSpend;
-        messages.push(`Списано ${bonusesToSpend} бонусов (скидка)`);
-      }
-
-      if (!payload.services && !payload.bonuses_delta) {
-        message.error('Укажите услуги для начисления бонусов или количество бонусов для списания');
+      if (!payload.services) {
+        message.error('Укажите услуги для начисления бонусов');
         return;
       }
 
@@ -210,14 +192,11 @@ const DashboardPage = () => {
       if (result.bonuses_awarded > 0) {
         successMessages.push(`Начислено ${result.bonuses_awarded} бонусов`);
       }
-      if (result.bonuses_spent > 0) {
-        successMessages.push(`Списано ${result.bonuses_spent} бонусов`);
-      }
       message.success(successMessages.join(' | '));
       
       const updatedUser = await getUserByCode(codeSearchResult.unique_code);
       setCodeSearchResult(updatedUser);
-      spendForm.resetFields(['bonuses_delta', 'reason', 'services']);
+      spendForm.resetFields(['reason', 'services']);
     } catch (error) {
       message.error(error.response?.data?.detail || 'Ошибка при изменении бонусов');
     } finally {
@@ -294,12 +273,12 @@ const DashboardPage = () => {
                 icon={<GiftOutlined />}
                 onClick={() => setSpendModalOpen(true)}
               >
-                Списать бонусы по коду
+                Начислить бонусы по коду
               </Button>
             }
           >
             <p style={{ color: '#6A6F7A', margin: 0 }}>
-              Используйте код из профиля пользователя для быстрого списания бонусов
+              Используйте код из профиля пользователя для быстрого начисления бонусов
             </p>
           </Card>
         </Col>
@@ -354,9 +333,9 @@ const DashboardPage = () => {
       </Row>
 
 
-      {/* Модальное окно для списания бонусов по коду */}
+      {/* Модальное окно для начисления бонусов по коду */}
       <Modal
-        title="Списать бонусы по коду пользователя"
+        title="Начислить бонусы по коду пользователя"
         open={spendModalOpen}
         onCancel={() => {
           setSpendModalOpen(false);
@@ -369,7 +348,7 @@ const DashboardPage = () => {
         <Form
           form={spendForm}
           layout="vertical"
-          onFinish={codeSearchResult ? handleSpendBonuses : handleCodeSearch}
+          onFinish={codeSearchResult ? handleAwardBonuses : handleCodeSearch}
         >
           {!codeSearchResult ? (
             <>
@@ -415,32 +394,6 @@ const DashboardPage = () => {
                   </div>
                 </Space>
               </Card>
-              <Form.Item
-                name="bonuses_delta"
-                label="Количество бонусов для списания"
-                extra="Это скидка, которую получает пользователь. Можно оставить пустым, если нужно только начислить бонусы за услуги."
-                rules={[
-                  {
-                    validator: (_, value) => {
-                      if (!value) {
-                        return Promise.resolve();
-                      }
-                      if (value <= 0) {
-                        return Promise.reject(new Error('Минимум 1 бонус'));
-                      }
-                      return Promise.resolve();
-                    },
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={1}
-                  max={codeSearchResult.loyalty_bonuses || 0}
-                  style={{ width: '100%' }}
-                  placeholder="Сколько бонусов списать (скидка)?"
-                  size="large"
-                />
-              </Form.Item>
               <Form.List name="services">
                 {(fields, { add, remove }) => (
                   <>
@@ -493,8 +446,7 @@ const DashboardPage = () => {
                     </Button>
                     {fields.length > 0 && (
                       <Typography.Text type="secondary">
-                        Бонусы будут начислены автоматически по проценту уровня пользователя ({cashbackPercent}%).
-                        Поле «Количество бонусов для списания» можно не заполнять, если нужно только начислить.
+                        Бонусы начисляются автоматически по проценту уровня пользователя ({cashbackPercent}%).
                       </Typography.Text>
                     )}
                   </>
@@ -513,15 +465,13 @@ const DashboardPage = () => {
                   <Button
                     onClick={() => {
                       setCodeSearchResult(null);
-                      spendForm.resetFields(['bonuses_delta', 'reason', 'services']);
+                      spendForm.resetFields(['reason', 'services']);
                     }}
                   >
                     Найти другого пользователя
                   </Button>
                   <Button type="primary" htmlType="submit" loading={spendLoading} block>
-                    {servicesTotal > 0 || spendForm.getFieldValue('bonuses_delta') 
-                      ? 'Применить изменения' 
-                      : 'Списать бонусы'}
+                    Начислить бонусы
                   </Button>
                 </Space>
               </Form.Item>

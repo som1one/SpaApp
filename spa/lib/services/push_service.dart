@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'
+    as fln;
 
 import 'api_service.dart';
 import 'auth_service.dart';
@@ -20,8 +22,8 @@ class PushService {
   factory PushService() => _instance;
   PushService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final fln.FlutterLocalNotificationsPlugin _localNotifications =
+      fln.FlutterLocalNotificationsPlugin();
   final _api = ApiService();
 
   GlobalKey<NavigatorState>? _navigatorKey;
@@ -51,9 +53,11 @@ class PushService {
         return;
       }
 
+      final messaging = FirebaseMessaging.instance;
+
       await _initLocalNotifications();
 
-      final settings = await _messaging.requestPermission(
+      final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
@@ -61,15 +65,15 @@ class PushService {
       debugPrint('📱 Push permissions: ${settings.authorizationStatus}');
 
       // На iOS отключаем автоматический показ в foreground — показываем через локальные
-      await _messaging.setForegroundNotificationPresentationOptions(
+      await messaging.setForegroundNotificationPresentationOptions(
         alert: false,
         badge: true,
         sound: true,
       );
 
-      await _syncToken();
+      await _syncToken(messaging);
 
-      _messaging.onTokenRefresh.listen((token) {
+      messaging.onTokenRefresh.listen((token) {
         debugPrint('🔄 FCM token refreshed: $token');
         _registerToken(token);
       });
@@ -91,7 +95,7 @@ class PushService {
       });
 
       // Приложение запущено из пуша (terminated state)
-      final initialMessage = await _messaging.getInitialMessage();
+      final initialMessage = await messaging.getInitialMessage();
       if (initialMessage != null) {
         debugPrint('🚀 App launched from notification: ${initialMessage.data}');
         SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -104,12 +108,12 @@ class PushService {
   }
 
   Future<void> _initLocalNotifications() async {
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const ios = DarwinInitializationSettings(
+    const android = fln.AndroidInitializationSettings('@mipmap/ic_launcher');
+    const ios = fln.DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: true,
     );
-    const settings = InitializationSettings(android: android, iOS: ios);
+    const settings = fln.InitializationSettings(android: android, iOS: ios);
 
     await _localNotifications.initialize(
       settings,
@@ -117,23 +121,25 @@ class PushService {
     );
 
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final plugin = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final plugin = _localNotifications.resolvePlatformSpecificImplementation<
+          fln.AndroidFlutterLocalNotificationsPlugin>();
       await plugin?.createNotificationChannel(
-        const AndroidNotificationChannel(
+        const fln.AndroidNotificationChannel(
           _channelId,
           _channelName,
           description: 'Рассылки и акции PRIRODA SPA',
-          importance: Importance.high,
+          importance: fln.Importance.high,
           playSound: true,
         ),
       );
     }
   }
 
-  void _onNotificationTapped(NotificationResponse response) {
+  void _onNotificationTapped(fln.NotificationResponse response) {
     if (response.payload == null || response.payload!.isEmpty) return;
     try {
-      final data = Map<String, String>.from(jsonDecode(response.payload!) as Map);
+      final data =
+          Map<String, String>.from(jsonDecode(response.payload!) as Map);
       _navigateFromNotification(data);
     } catch (_) {
       _navigateToHome();
@@ -145,17 +151,18 @@ class PushService {
     required String body,
     Map<String, dynamic> data = const {},
   }) {
-    final payload = data.isEmpty ? null : jsonEncode(Map<String, String>.from(data));
+    final payload =
+        data.isEmpty ? null : jsonEncode(Map<String, String>.from(data));
     final id = _notificationId++;
-    final details = NotificationDetails(
-      android: AndroidNotificationDetails(
+    final details = fln.NotificationDetails(
+      android: fln.AndroidNotificationDetails(
         _channelId,
         _channelName,
         channelDescription: 'Рассылки и акции PRIRODA SPA',
-        importance: Importance.high,
-        priority: Priority.high,
+        importance: fln.Importance.high,
+        priority: fln.Priority.high,
       ),
-      iOS: const DarwinNotificationDetails(
+      iOS: const fln.DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
@@ -183,9 +190,9 @@ class PushService {
     );
   }
 
-  Future<void> _syncToken() async {
+  Future<void> _syncToken(FirebaseMessaging messaging) async {
     try {
-      final token = await _messaging.getToken();
+      final token = await messaging.getToken();
       if (token != null) {
         debugPrint('🔑 FCM token obtained');
         await _registerToken(token);
@@ -215,7 +222,12 @@ class PushService {
 
   Future<void> unregister() async {
     try {
-      final token = await _messaging.getToken();
+      if (Firebase.apps.isEmpty) {
+        debugPrint('⏸️ Firebase not initialized, skipping token unregister');
+        return;
+      }
+
+      final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
         await _api.post('/devices/unregister', {'token': token});
         debugPrint('✅ Device token unregistered');

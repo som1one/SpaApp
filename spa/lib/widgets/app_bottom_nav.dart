@@ -25,7 +25,7 @@ class AppBottomNav extends StatelessWidget {
       ),
       _BottomNavConfig(
         item: BottomNavItem.menu,
-        label: 'Меню',
+        label: 'Онлайн запись',
         assetPath: 'assets/images/Navigation/menu_page.svg',
         routeName: RouteNames.menuSpa,
       ),
@@ -78,68 +78,72 @@ class AppBottomNav extends StatelessWidget {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOutCubic,
-                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 4, horizontal: 2),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 4, horizontal: 6),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppColors.buttonPrimary.withOpacity(0.15)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.buttonPrimary.withOpacity(0.1)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: SvgPicture.asset(
-                            config.assetPath,
-                            width: 20,
-                            height: 20,
-                            colorFilter: ColorFilter.mode(
-                              isSelected
-                                  ? AppColors.buttonPrimary
-                                  : const Color(0xFF9E9E9E),
-                              BlendMode.srcIn,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.buttonPrimary.withOpacity(0.1)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            placeholderBuilder: (BuildContext context) => SizedBox(
+                            child: SvgPicture.asset(
+                              config.assetPath,
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: isSelected
+                              colorFilter: ColorFilter.mode(
+                                isSelected
                                     ? AppColors.buttonPrimary
                                     : const Color(0xFF9E9E9E),
+                                BlendMode.srcIn,
+                              ),
+                              placeholderBuilder: (BuildContext context) =>
+                                  SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: isSelected
+                                      ? AppColors.buttonPrimary
+                                      : const Color(0xFF9E9E9E),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          config.label,
-                          style: TextStyle(
-                            fontFamily: 'Inter18',
-                            fontSize: 10,
-                            height: 1.1,
-                            fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected
-                                ? AppColors.buttonPrimary
-                                : AppColors.textMuted,
-                            letterSpacing: -0.2,
+                          const SizedBox(height: 2),
+                          Text(
+                            config.label,
+                            style: TextStyle(
+                              fontFamily: 'Inter18',
+                              fontSize: 10,
+                              height: 1.1,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: isSelected
+                                  ? AppColors.buttonPrimary
+                                  : AppColors.textMuted,
+                              letterSpacing: -0.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -196,5 +200,3 @@ class _BottomNavConfig {
     required this.routeName,
   });
 }
-
-

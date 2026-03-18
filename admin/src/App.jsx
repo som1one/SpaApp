@@ -5,12 +5,10 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import InvitesPage from './pages/InvitesPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
-import MenuPage from './pages/MenuPage';
 import UsersPage from './pages/UsersPage';
 import AuditPage from './pages/AuditPage';
 import NotificationsPage from './pages/NotificationsPage';
 import LoyaltyPage from './pages/LoyaltyPage';
-import StaffPage from './pages/StaffPage';
 import CustomContentPage from './pages/CustomContentPage';
 
 const App = () => (
@@ -26,13 +24,11 @@ const App = () => (
       )}
     >
       <Route index element={<DashboardPage />} />
-      <Route path="menu" element={<MenuPage />} />
       <Route path="users" element={<UsersPage />} />
       <Route path="invites" element={<InvitesPage />} />
       <Route path="audit" element={<AuditPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="loyalty" element={<LoyaltyPage />} />
-      <Route path="staff" element={<StaffPage />} />
       <Route path="custom-content" element={<CustomContentPage />} />
     </Route>
   </Routes>

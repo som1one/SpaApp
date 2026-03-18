@@ -1,7 +1,10 @@
 import logging
+from datetime import datetime
+from io import BytesIO
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -12,6 +15,41 @@ from app.schemas.admin_users import AdminUserResponse, AdminUsersListResponse
 
 router = APIRouter(prefix="/admin/users", tags=["Admin Users"])
 logger = logging.getLogger(__name__)
+
+
+def _build_users_query(
+    db: Session,
+    search: Optional[str],
+    is_active: Optional[bool],
+    is_verified: Optional[bool],
+    min_loyalty: Optional[int],
+    sort_by: str,
+    sort_dir: str,
+):
+    query = db.query(User)
+
+    if search:
+        search_lower = search.lower().strip()
+        if search_lower:
+            query = query.filter(
+                or_(
+                    User.email.ilike(f"%{search_lower}%"),
+                    User.name.ilike(f"%{search_lower}%"),
+                    User.surname.ilike(f"%{search_lower}%"),
+                    User.unique_code.ilike(f"%{search_lower.upper()}%"),
+                )
+            )
+
+    if is_active is not None:
+        query = query.filter(User.is_active == is_active)
+    if is_verified is not None:
+        query = query.filter(User.is_verified == is_verified)
+    if min_loyalty is not None:
+        query = query.filter(User.loyalty_level_id >= min_loyalty)
+
+    order_col = User.loyalty_level_id if sort_by == "loyalty_level" else User.created_at
+    query = query.order_by(order_col.asc() if sort_dir == "asc" else order_col.desc())
+    return query
 
 
 @router.get("", response_model=AdminUsersListResponse)
@@ -27,40 +65,15 @@ async def list_users(
     limit: int = Query(25, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    # Построение базового запроса
-    base_query = db.query(User)
-    
-    # Оптимизированный поиск
-    if search:
-        search_lower = search.lower().strip()
-        if search_lower:
-            # Поиск по имени, фамилии, email и уникальному коду
-            search_filter = or_(
-                User.email.ilike(f"%{search_lower}%"),
-                User.name.ilike(f"%{search_lower}%"),
-                User.surname.ilike(f"%{search_lower}%"),
-                User.unique_code.ilike(f"%{search_lower.upper()}%"),  # Код всегда в верхнем регистре
-            )
-            base_query = base_query.filter(search_filter)
-
-    # Применяем фильтры
-    if is_active is not None:
-        base_query = base_query.filter(User.is_active == is_active)
-    if is_verified is not None:
-        base_query = base_query.filter(User.is_verified == is_verified)
-    if min_loyalty is not None:
-        base_query = base_query.filter(User.loyalty_level >= min_loyalty)
-
-    # Определяем сортировку
-    if sort_by == "loyalty_level":
-        order_col = User.loyalty_level
-    else:
-        order_col = User.created_at
-    
-    if sort_dir == "asc":
-        base_query = base_query.order_by(order_col.asc())
-    else:
-        base_query = base_query.order_by(order_col.desc())
+    base_query = _build_users_query(
+        db=db,
+        search=search,
+        is_active=is_active,
+        is_verified=is_verified,
+        min_loyalty=min_loyalty,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
 
     # Оптимизация: подсчитываем total только если нужно (для первой страницы или если есть фильтры)
     # Для остальных страниц можно использовать приблизительное значение
@@ -106,3 +119,82 @@ async def list_users(
         logger.error("Error creating response: %s", str(e), exc_info=True)
         raise
 
+
+@router.get("/export")
+async def export_users_excel(
+    db: Session = Depends(get_db),
+    _: dict = Depends(admin_required),
+    search: Optional[str] = Query(None, description="Поиск по имени или email"),
+    is_active: Optional[bool] = Query(None),
+    is_verified: Optional[bool] = Query(None),
+    min_loyalty: Optional[int] = Query(None, ge=0),
+    sort_by: str = Query("created_at", pattern="^(created_at|loyalty_level)$"),
+    sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
+):
+    try:
+        from openpyxl import Workbook
+    except Exception as exc:
+        logger.error("openpyxl is not installed", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Экспорт в Excel недоступен: не установлен openpyxl",
+        ) from exc
+
+    users = _build_users_query(
+        db=db,
+        search=search,
+        is_active=is_active,
+        is_verified=is_verified,
+        min_loyalty=min_loyalty,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    ).all()
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Users"
+
+    headers = [
+        "ID",
+        "Код",
+        "Имя",
+        "Фамилия",
+        "Email",
+        "Телефон",
+        "Активен",
+        "Подтвержден",
+        "Уровень лояльности",
+        "Бонусы",
+        "Потрачено бонусов",
+        "Дата регистрации (UTC)",
+    ]
+    worksheet.append(headers)
+
+    for user in users:
+        worksheet.append(
+            [
+                user.id,
+                user.unique_code or "",
+                user.name or "",
+                user.surname or "",
+                user.email or "",
+                user.phone or "",
+                "Да" if user.is_active else "Нет",
+                "Да" if user.is_verified else "Нет",
+                user.loyalty_level_id if user.loyalty_level_id is not None else "",
+                user.loyalty_bonuses or 0,
+                user.spent_bonuses or 0,
+                user.created_at.isoformat() if user.created_at else "",
+            ]
+        )
+
+    file_stream = BytesIO()
+    workbook.save(file_stream)
+    file_stream.seek(0)
+
+    filename = f"users_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -2,6 +2,12 @@
 
 Краткий гайд по настройке Firebase для аутентификации и push-уведомлений в мобильном приложении.
 
+**Пошаговые гайды по платформам:**
+- **iOS** — [FIREBASE_IOS.md](FIREBASE_IOS.md) (Xcode, Push capability, проверка на устройстве).
+- **Android** — [FIREBASE_ANDROID.md](FIREBASE_ANDROID.md) (google-services.json, канал, подпись).
+
+Что скачать из консоли и куда положить — [FIREBASE_CREDENTIALS.md](FIREBASE_CREDENTIALS.md).
+
 ---
 
 ## 1. Создание проекта Firebase
@@ -66,7 +72,7 @@ flutterfire configure
 
 1. **Build** → **Cloud Messaging**.
 2. FCM включён по умолчанию после добавления Android/iOS приложений.
-3. Для отправки пушей с бэкенда понадобится **Server Key** (см. раздел 5).
+3. Для отправки пушей с бэкенда настройте **FCM v1** (сервисный аккаунт) или Legacy (см. раздел 5).
 
 ---
 
@@ -90,24 +96,70 @@ flutterfire configure
 
 ---
 
-## 5. Server Key для бэкенда (отправка пушей)
+## 5. Настройка бэкенда для отправки пушей
 
-Чтобы админка могла отправлять рассылки на устройства:
+Бэкенд поддерживает два варианта:
 
-1. В Firebase Console: **Project settings** (шестерёнка) → вкладка **Cloud Messaging**.
-2. В блоке **Cloud Messaging API (Legacy)** найдите **Server key**.  
-   Если блока нет — включите **Cloud Messaging API (Legacy)** в [Google Cloud Console](https://console.cloud.google.com/) для проекта Firebase (APIs & Services → Enabled APIs).
-3. Скопируйте **Server key** и добавьте в `.env` бэкенда:
+### Вариант A (рекомендуется): FCM HTTP v1 API
+
+Работает с **Firebase Cloud Messaging API (V1)** — не требует Legacy API.
+
+1. В Firebase Console: **Project settings** (шестерёнка) → вкладка **General** → скопируйте **Project ID**.
+2. **Project settings** → вкладка **Service accounts** → **Generate new private key** — скачайте JSON ключа сервисного аккаунта.
+3. В `.env` бэкенда задайте:
+   ```env
+   FCM_PROJECT_ID=ваш-project-id
+   GOOGLE_APPLICATION_CREDENTIALS=/путь/к/скачанному-ключу.json
+   ```
+   Либо вместо пути можно передать JSON одной строкой (удобно для Docker):
+   ```env
+   FCM_PROJECT_ID=ваш-project-id
+   FCM_CREDENTIALS_JSON={"type":"service_account",...}
+   ```
+4. Перезапустите бэкенд.
+
+Подробнее: **FIREBASE_CREDENTIALS.md** (раздел про сервисный аккаунт) и **backend/ENV_SETUP.md**.
+
+### Вариант B (устаревший): Legacy Server Key
+
+Только если у вас включён **Cloud Messaging API (Legacy)** в Google Cloud:
+
+1. Firebase Console → **Project settings** → вкладка **Cloud Messaging** → блок **Cloud Messaging API (Legacy)** → **Server key**.
+2. В `.env` бэкенда:
    ```env
    FCM_SERVER_KEY=ваш-server-key-без-пробелов
    ```
-4. Перезапустите бэкенд. Без `FCM_SERVER_KEY` рассылки с сервера выполняться не будут (в логах будет предупреждение).
+3. Перезапустите бэкенд.
 
-Подробнее про переменные бэкенда см. `backend/ENV_SETUP.md` (раздел про FCM).
+Без настроенного FCM (v1 или Legacy) рассылки с сервера выполняться не будут.
 
 ---
 
 ## 6. Проверка
+
+### Проверка по API (настройка бэкенда)
+
+Убедиться, что бэкенд видит FCM-ключ (без выдачи самого ключа):
+
+```bash
+# Общий health (в т.ч. push)
+curl -s https://ваш-домен.ru/health | jq .
+
+# Отдельный эндпоинт статуса push
+curl -s https://ваш-домен.ru/api/v1/config/push | jq .
+```
+
+Ожидаемый ответ при настроенном FCM:
+```json
+{
+  "fcm_configured": true,
+  "message": "FCM настроен, рассылки доступны"
+}
+```
+
+Если `fcm_configured: false` — настройте FCM v1 (`FCM_PROJECT_ID` + `GOOGLE_APPLICATION_CREDENTIALS` или `FCM_CREDENTIALS_JSON`) или Legacy (`FCM_SERVER_KEY`) в `backend/.env` и перезапустите бэкенд.
+
+### Проверка приложения и рассылок
 
 1. **Сборка:**
    ```bash
@@ -129,7 +181,7 @@ flutterfire configure
 | На Android не приходят пуши | Наличие `google-services.json`, канал уведомлений (создаётся в коде), не убита батарейная оптимизация для приложения. |
 | «Firebase not initialized» | Вызов `Firebase.initializeApp()` до работы с FCM, наличие `firebase_options.dart` и корректная платформа в `currentPlatform`. |
 | Токен не регистрируется на бэке | Пользователь должен быть авторизован; проверить логи приложения и бэкенда, доступность API `/devices/register`. |
-| Пуши не отправляются с бэка | В `.env` задан `FCM_SERVER_KEY`, бэкенд перезапущен после изменения `.env`. |
+| Пуши не отправляются с бэка | Настроены FCM v1 (FCM_PROJECT_ID + credentials) или FCM_SERVER_KEY в `.env`, бэкенд перезапущен. Проверка: `GET /api/v1/config/push` → `fcm_configured: true`. |
 
 ---
 

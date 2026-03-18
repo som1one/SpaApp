@@ -3,23 +3,31 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.models.notification_campaign import NotificationChannel, NotificationStatus
+from app.models.notification_campaign import (
+    NotificationCategory,
+    NotificationChannel,
+    NotificationStatus,
+)
 
 
 class NotificationCreateRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=200)
     message: str = Field(..., min_length=1)  # Уменьшено с 5 до 1 для более гибкой валидации
+    category: NotificationCategory = NotificationCategory.GENERAL
     channel: NotificationChannel = NotificationChannel.ALL
     audience: Optional[str] = None
+    scheduled_at: Optional[datetime] = None
 
 
 class NotificationResponse(BaseModel):
     id: int
     title: str
     message: str
+    category: NotificationCategory
     channel: NotificationChannel
     audience: Optional[str]
     status: NotificationStatus
+    scheduled_at: Optional[datetime]
     sent_at: Optional[datetime]
     success_count: Optional[int]
     failure_count: Optional[int]
@@ -32,4 +40,3 @@ class NotificationResponse(BaseModel):
 class NotificationListResponse(BaseModel):
     items: List[NotificationResponse]
     total: int
-

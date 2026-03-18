@@ -48,3 +48,4 @@ dist/
 *.tmp
 *.temp
 
+backend/firebase-service-account.json

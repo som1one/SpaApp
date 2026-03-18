@@ -1,13 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 class PopularJourneyCarousel extends StatefulWidget {
-  const PopularJourneyCarousel({super.key});
+  final List<PopularJourneyItem>? items;
+
+  const PopularJourneyCarousel({
+    super.key,
+    this.items,
+  });
 
   @override
   State<PopularJourneyCarousel> createState() => _PopularJourneyCarouselState();
@@ -18,26 +24,31 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
   int _currentPage = 0;
   Timer? _autoSlideTimer;
 
-  final List<_JourneyCardData> _journeys = const [
-    _JourneyCardData(
-      imagePath: 'assets/images/Home/IMG_2918.png',
-      title: 'Клубная карта WELLNESS PRIRODA',
-      subtitle: 'Привилегии и специальные предложения для постоянных гостей.',
-      url: 'https://prirodaspa.ru/abonement-offer',
-    ),
-    _JourneyCardData(
-      imagePath: 'assets/images/Home/IMG2919.png',
-      title: 'Спа-терапия, зашитая в отдых',
-      subtitle: 'Комплексные программы для полного восстановления и релакса.',
-      url: 'https://prirodaspa.ru/spa-program',
-    ),
-    _JourneyCardData(
-      imagePath: 'assets/images/Home/IMG2928.png',
-      title: 'Конструктор спа-программы',
-      subtitle: 'Создайте индивидуальную программу под ваши потребности.',
-      url: 'https://prirodaspa.ru/contructor',
-    ),
-  ];
+  late final List<PopularJourneyItem> _journeys = widget.items?.isNotEmpty ==
+          true
+      ? widget.items!
+      : const [
+          PopularJourneyItem(
+            imageAssetPath: 'assets/images/Home/IMG_2918.png',
+            title: 'Клубная карта WELLNESS PRIRODA',
+            subtitle:
+                'Привилегии и специальные предложения для постоянных гостей.',
+            url: 'https://prirodaspa.ru/abonement-offer',
+          ),
+          PopularJourneyItem(
+            imageAssetPath: 'assets/images/Home/IMG2919.png',
+            title: 'Спа-терапия, зашитая в отдых',
+            subtitle:
+                'Комплексные программы для полного восстановления и релакса.',
+            url: 'https://prirodaspa.ru/spa-program',
+          ),
+          PopularJourneyItem(
+            imageAssetPath: 'assets/images/Home/IMG2928.png',
+            title: 'Конструктор спа-программы',
+            subtitle: 'Создайте индивидуальную программу под ваши потребности.',
+            url: 'https://prirodaspa.ru/contructor',
+          ),
+        ];
 
   @override
   void dispose() {
@@ -141,16 +152,18 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
 }
 
 class _JourneyCardData {
-  final String imagePath;
   final String title;
   final String subtitle;
   final String? url;
+  final String? imageUrl;
+  final String? imageAssetPath;
 
   const _JourneyCardData({
-    required this.imagePath,
     required this.title,
     required this.subtitle,
     this.url,
+    this.imageUrl,
+    this.imageAssetPath,
   });
 }
 
@@ -169,6 +182,7 @@ class _JourneyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNetworkImage = data.imageUrl != null && data.imageUrl!.isNotEmpty;
     return RepaintBoundary(
       child: GestureDetector(
         onTap: () => _openUrl(data.url),
@@ -188,12 +202,32 @@ class _JourneyCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(
-                  data.imagePath,
-                  fit: BoxFit.cover,
-                  // Кешируем изображение для плавности
-                  cacheWidth: (MediaQuery.of(context).size.width * 0.82 * MediaQuery.of(context).devicePixelRatio).round(),
-                ),
+                if (isNetworkImage)
+                  CachedNetworkImage(
+                    imageUrl: data.imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      color: AppColors.buttonPrimary.withOpacity(0.08),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: AppColors.buttonPrimary.withOpacity(0.08),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.black.withOpacity(0.25),
+                      ),
+                    ),
+                  )
+                else
+                  Image.asset(
+                    data.imageAssetPath ?? 'assets/images/Home/IMG_2918.png',
+                    fit: BoxFit.cover,
+                    // Кешируем изображение для плавности
+                    cacheWidth: (MediaQuery.of(context).size.width *
+                            0.82 *
+                            MediaQuery.of(context).devicePixelRatio)
+                        .round(),
+                  ),
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -244,4 +278,14 @@ class _JourneyCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class PopularJourneyItem extends _JourneyCardData {
+  const PopularJourneyItem({
+    required super.title,
+    required super.subtitle,
+    super.url,
+    super.imageUrl,
+    super.imageAssetPath,
+  });
 }

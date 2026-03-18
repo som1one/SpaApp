@@ -17,7 +17,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dayjs from '../utils/dayjs';
 import { createInvite, fetchInvites } from '../api/invites';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 // В Ant Design v5 нет отдельного экспорта InputGroup,
 // используем дочерний компонент Input.Group
@@ -47,8 +47,9 @@ const InvitesPage = () => {
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const isSuperAdmin = user?.role === 'super_admin';
 
-  const loadInvites = async () => {
+  const loadInvites = useCallback(async () => {
     try {
       setLoading(true);
       const data = await fetchInvites();
@@ -58,11 +59,15 @@ const InvitesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
     loadInvites();
-  }, []);
+  }, [isSuperAdmin, loadInvites]);
 
   const onFinish = async (values) => {
     try {
@@ -105,7 +110,7 @@ const InvitesPage = () => {
         document.body.removeChild(textarea);
       }
       message.success('Ссылка скопирована');
-    } catch (error) {
+    } catch {
       message.error('Не удалось скопировать ссылку');
     }
   }, []);
@@ -158,7 +163,7 @@ const InvitesPage = () => {
     },
   ], [handleCopy]);
 
-  if (user?.role !== 'super_admin') {
+  if (!isSuperAdmin) {
     return (
       <Card className="invites-card">
         <p>Только супер-администраторы могут управлять приглашениями.</p>
@@ -240,5 +245,4 @@ const InvitesPage = () => {
 };
 
 export default InvitesPage;
-
 

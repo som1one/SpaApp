@@ -2,12 +2,14 @@ import apiClient from './client';
 
 export const fetchNotifications = async ({
   status,
+  category,
   page = 1,
   pageSize = 20,
 } = {}) => {
   const response = await apiClient.get('/admin/notifications', {
     params: {
       status_filter: status,
+      category_filter: category,
       limit: pageSize,
       offset: (page - 1) * pageSize,
     },
@@ -26,4 +28,3 @@ export const updateNotificationStatus = async (id, status) => {
   });
   return response.data;
 };
-

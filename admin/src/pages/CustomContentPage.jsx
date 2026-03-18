@@ -14,8 +14,8 @@ import {
   message,
   ColorPicker,
 } from 'antd';
-import { useAuth } from '../context/AuthContext';
-import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/useAuth';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   fetchCustomContentBlocks,
   createCustomContentBlock,
@@ -24,7 +24,7 @@ import {
 } from '../api/customContent';
 
 const blockTypeOptions = [
-  { value: 'spa_travel', label: 'Spa-путешествия' },
+  { value: 'spa_travel', label: 'Популярные SPA (карусель)' },
   { value: 'promotion', label: 'Акция' },
   { value: 'banner', label: 'Баннер' },
   { value: 'custom', label: 'Кастомный' },
@@ -37,18 +37,9 @@ const CustomContentPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInitial, setModalInitial] = useState(null);
   const [form] = Form.useForm();
+  const isSuperAdmin = user?.role === 'super_admin';
 
-  if (user?.role !== 'super_admin') {
-    return (
-      <Card>
-        <Typography.Text>
-          Управлять кастомным контентом могут только супер-администраторы.
-        </Typography.Text>
-      </Card>
-    );
-  }
-
-  const loadBlocks = async () => {
+  const loadBlocks = useCallback(async () => {
     try {
       setLoading(true);
       const data = await fetchCustomContentBlocks();
@@ -58,16 +49,17 @@ const CustomContentPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (user?.role === 'super_admin') {
-      loadBlocks();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleOpenModal = (record) => {
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
+    loadBlocks();
+  }, [isSuperAdmin, loadBlocks]);
+
+  const handleOpenModal = useCallback((record) => {
     setModalInitial(record || null);
     setModalOpen(true);
     if (record) {
@@ -94,7 +86,7 @@ const CustomContentPage = () => {
         is_active: true,
       });
     }
-  };
+  }, [form]);
 
   const handleSubmit = async (values) => {
     try {
@@ -114,7 +106,7 @@ const CustomContentPage = () => {
     }
   };
 
-  const handleDelete = (record) => {
+  const handleDelete = useCallback((record) => {
     Modal.confirm({
       title: 'Удалить блок?',
       content: `Блок "${record.title}" будет удалён и перестанет отображаться на главном экране.`,
@@ -131,7 +123,7 @@ const CustomContentPage = () => {
         }
       },
     });
-  };
+  }, [loadBlocks]);
 
   const columns = useMemo(
     () => [
@@ -181,9 +173,18 @@ const CustomContentPage = () => {
         ),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [handleDelete, handleOpenModal],
   );
+
+  if (!isSuperAdmin) {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять кастомным контентом могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -314,4 +315,3 @@ const CustomContentPage = () => {
 };
 
 export default CustomContentPage;
-

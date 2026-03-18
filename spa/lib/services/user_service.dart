@@ -43,6 +43,26 @@ class UserService {
     return getCurrentUser(forceRefresh: true);
   }
 
+  Future<User?> updateProfile({
+    String? name,
+    String? surname,
+  }) async {
+    final token = _authService.token;
+    if (token == null) {
+      return _cachedUser;
+    }
+
+    _apiService.token = token;
+    final payload = <String, dynamic>{};
+    if (name != null) payload['name'] = name;
+    if (surname != null) payload['surname'] = surname;
+
+    final response = await _apiService.put('/auth/users/me', payload);
+    final user = User.fromJson(response);
+    _cachedUser = user;
+    return user;
+  }
+
   void updateCachedUser(User user) {
     _cachedUser = user;
   }
@@ -51,5 +71,3 @@ class UserService {
     _cachedUser = null;
   }
 }
-
-

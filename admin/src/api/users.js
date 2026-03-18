@@ -25,3 +25,24 @@ export const fetchUsers = async ({
   return response.data;
 };
 
+export const exportUsersExcel = async ({
+  search,
+  isActive,
+  isVerified,
+  minLoyalty,
+  sortBy,
+  sortDir,
+} = {}) => {
+  const response = await apiClient.get('/admin/users/export', {
+    params: {
+      search,
+      is_active: isActive,
+      is_verified: isVerified,
+      min_loyalty: minLoyalty,
+      sort_by: sortBy,
+      sort_dir: sortDir,
+    },
+    responseType: 'blob',
+  });
+  return response.data;
+};

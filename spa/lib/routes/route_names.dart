@@ -13,9 +13,9 @@ class RouteNames {
   static const String bookingDetails = '/booking-details';
   static const String password = '/password';
   static const String loyalty = '/loyalty';
+  static const String loyaltyHistory = '/loyalty-history';
   static const String masterSelection = '/master-selection';
   static const String timeSelection = '/time-selection';
   static const String bookingConfirm = '/booking-confirm';
   static const String pastBookings = '/past-bookings';
 }
-

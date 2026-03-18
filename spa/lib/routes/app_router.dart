@@ -18,6 +18,7 @@ import '../screens/booking/booking_confirm_screen.dart';
 import '../screens/auth/password_screen.dart';
 import '../screens/bookings/bookings_screen.dart';
 import '../screens/bookings/past_bookings_screen.dart';
+import '../screens/loyalty/loyalty_history_screen.dart';
 import '../screens/loyalty/loyalty_screen.dart';
 import '../models/service.dart';
 
@@ -139,7 +140,6 @@ class AppRouter {
           ),
         );
 
-
       case RouteNames.profile:
         return SlideRightRoute(
           page: const ProfileScreen(),
@@ -153,6 +153,11 @@ class AppRouter {
       case RouteNames.loyalty:
         return SlideRightRoute(
           page: const LoyaltyScreen(),
+        );
+
+      case RouteNames.loyaltyHistory:
+        return SlideRightRoute(
+          page: const LoyaltyHistoryScreen(),
         );
 
       case RouteNames.pastBookings:
@@ -206,7 +211,10 @@ class AppRouter {
         final staffId = args?['staffId'] as int?;
         final staffName = args?['staffName'] as String?;
         final datetime = args?['datetime'] as String?;
-        if (serviceId == null || staffId == null || staffName == null || datetime == null) {
+        if (serviceId == null ||
+            staffId == null ||
+            staffName == null ||
+            datetime == null) {
           return FadeRoute(
             page: Scaffold(
               appBar: AppBar(title: const Text('Ошибка')),
@@ -237,9 +245,11 @@ class AppRouter {
         final email = args?['email'] as String?;
         final password = args?['password'] as String?;
         final phone = args?['phone'] as String?;
-        
-        if (email == null || email.isEmpty || 
-            password == null || password.isEmpty) {
+
+        if (email == null ||
+            email.isEmpty ||
+            password == null ||
+            password.isEmpty) {
           return FadeRoute(
             page: Scaffold(
               appBar: AppBar(title: const Text('Ошибка')),
@@ -249,7 +259,7 @@ class AppRouter {
             ),
           );
         }
-        
+
         return SlideRightRoute(
           page: NameRegistrationScreen(
             email: email,
@@ -267,4 +277,3 @@ class AppRouter {
     }
   }
 }
-

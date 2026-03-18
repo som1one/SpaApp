@@ -114,6 +114,11 @@ async def sync_yclients_bookings():
                 else:
                     booking_status = BookingStatus.PENDING
                 
+                # Ищем существующую запись по YClients ID (может пригодиться для fallback по user_id)
+                existing_booking = db.query(Booking).filter(
+                    Booking.notes.contains(f"YClients. ID: {yc_booking_id}")
+                ).first()
+
                 # Ищем пользователя
                 user = None
                 
@@ -147,16 +152,20 @@ async def sync_yclients_bookings():
                         if user:
                             logger.debug(f"Пользователь найден по телефону для записи {yc_booking_id}")
                 
+                # Fallback: если контактные данные не пришли из YClients,
+                # берем пользователя из уже существующей локальной записи.
+                if not user and existing_booking and existing_booking.user_id:
+                    user = db.query(User).filter(User.id == existing_booking.user_id).first()
+                    if user:
+                        logger.debug(
+                            f"Пользователь взят из локальной записи по YClients ID {yc_booking_id}"
+                        )
+
                 if not user:
                     skipped_count += 1
                     logger.debug(f"Пользователь не найден для записи YClients {yc_booking_id} (email: {client_email}, phone: {client_phone}, comment: {comment[:50]})")
                     continue
-                
-                # Ищем существующую запись по YClients ID
-                existing_booking = db.query(Booking).filter(
-                    Booking.notes.contains(f"YClients. ID: {yc_booking_id}")
-                ).first()
-                
+
                 # Если не нашли по ID, ищем по уникальному коду пользователя и дате
                 if not existing_booking and user.unique_code:
                     existing_booking = db.query(Booking).filter(
@@ -244,4 +253,3 @@ async def sync_yclients_bookings():
         db.rollback()
     finally:
         db.close()
-

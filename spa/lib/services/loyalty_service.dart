@@ -37,5 +37,25 @@ class LoyaltyService {
       throw Exception('Ошибка обновления настройки автоприменения: $e');
     }
   }
-}
 
+  Future<List<LoyaltyHistoryItem>> getHistory() async {
+    final token = _authService.token;
+    if (token != null) {
+      _apiService.token = token;
+    }
+
+    try {
+      final response = await _apiService.get('/loyalty/history');
+      if (response is Map<String, dynamic>) {
+        final items = response['items'] as List<dynamic>? ?? [];
+        return items
+            .map((item) =>
+                LoyaltyHistoryItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      throw Exception('Неверный формат ответа от сервера');
+    } catch (e) {
+      throw Exception('Ошибка получения истории бонусов: $e');
+    }
+  }
+}

@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.dependencies import get_current_user
+from app.utils.user_code import ensure_user_unique_code
 from app.services.yclients_service import yclients_service
 from app.models.service import Service
 from app.models.user import User
@@ -120,8 +121,8 @@ class BookingRequest(BaseModel):
     service_id: int = Field(..., description="ID услуги в нашей БД")
     staff_id: int = Field(..., description="ID мастера в YClients")
     datetime_str: str = Field(..., description="Дата и время в формате YYYY-MM-DD HH:MM")
-    use_bonuses: bool = Field(False, description="Использовать бонусы")
-    bonuses_amount: int = Field(0, description="Количество бонусов к списанию", ge=0)
+    use_bonuses: bool = Field(False, description="DEPRECATED: списание бонусов отключено")
+    bonuses_amount: int = Field(0, description="DEPRECATED: списание бонусов отключено", ge=0)
     comment: Optional[str] = Field(None, description="Комментарий к записи")
 
 
@@ -641,34 +642,30 @@ async def create_booking(
             }
         )
     
-    # Проверяем и применяем бонусы
+    # Списание бонусов отключено по бизнес-правилам.
+    # Оставляем поля в API для обратной совместимости со старыми клиентами.
     bonuses_to_use = 0
     final_price = service.price or 0
+
+    # Для старых аккаунтов автоматически восстанавливаем unique_code,
+    # чтобы YClients-синхронизация всегда могла привязать completed-запись к пользователю.
+    if ensure_user_unique_code(db, current_user):
+        db.commit()
+        db.refresh(current_user)
     
-    if booking.use_bonuses and booking.bonuses_amount > 0:
-        # Проверяем, что у пользователя достаточно бонусов
-        user_bonuses = current_user.loyalty_bonuses or 0
-        
-        if booking.bonuses_amount > user_bonuses:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Недостаточно бонусов. Доступно: {user_bonuses}"
-            )
-        
-        # 1 бонус = 1 рубль
-        bonuses_to_use = min(booking.bonuses_amount, int(final_price))
-        final_price = final_price - bonuses_to_use
-        
-        logger.info(f"Применяем {bonuses_to_use} бонусов, итоговая цена: {final_price}")
+    if booking.use_bonuses or booking.bonuses_amount > 0:
+        logger.info(
+            "Запрошено списание бонусов, но эта функция отключена",
+            extra={"user_id": current_user.id, "requested_amount": booking.bonuses_amount},
+        )
     
     # Формируем комментарий
     comment_parts = []
     if booking.comment:
         comment_parts.append(booking.comment)
     
-    if bonuses_to_use > 0:
-        comment_parts.append(f"💎 Списано {bonuses_to_use} бонусов (скидка {bonuses_to_use} ₽)")
-        comment_parts.append(f"К оплате: {final_price:.0f} ₽")
+    if current_user.unique_code:
+        comment_parts.append(f"Код клиента: {current_user.unique_code}")
     
     full_comment = " | ".join(comment_parts) if comment_parts else None
     
@@ -704,13 +701,6 @@ async def create_booking(
             f"✅ Запись создана в YClients: ID={yclients_record_id}, "
             f"услуга={service.name}, пользователь={current_user.id}"
         )
-        
-        # Списываем бонусы если они использовались
-        if bonuses_to_use > 0:
-            current_user.loyalty_bonuses = (current_user.loyalty_bonuses or 0) - bonuses_to_use
-            current_user.spent_bonuses = (current_user.spent_bonuses or 0) + bonuses_to_use
-            db.commit()
-            logger.info(f"Списано {bonuses_to_use} бонусов у пользователя {current_user.id}, потрачено всего: {current_user.spent_bonuses}")
         
         # Создаем запись в локальной БД
         from datetime import datetime as dt
@@ -754,4 +744,3 @@ async def create_booking(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка создания записи: {str(e)}"
         )
-

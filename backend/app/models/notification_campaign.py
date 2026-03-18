@@ -13,8 +13,18 @@ class NotificationChannel(enum.Enum):
 
 class NotificationStatus(enum.Enum):
     DRAFT = "draft"
+    SCHEDULED = "scheduled"
     SENT = "sent"
     CANCELLED = "cancelled"
+
+
+class NotificationCategory(enum.Enum):
+    GENERAL = "general"
+    PROMO = "promo"
+    BOOKINGS = "bookings"
+    LOYALTY = "loyalty"
+    NEWS = "news"
+    SYSTEM = "system"
 
 
 class EnumType(TypeDecorator):
@@ -43,13 +53,14 @@ class NotificationCampaign(BaseModel):
 
     title = Column(String(200), nullable=False)
     message = Column(Text, nullable=False)
+    category = Column(EnumType(NotificationCategory, 50), default=NotificationCategory.GENERAL, nullable=False)
     channel = Column(EnumType(NotificationChannel, 50), default=NotificationChannel.ALL, nullable=False)
     audience = Column(String(200), nullable=True)
     status = Column(EnumType(NotificationStatus, 50), default=NotificationStatus.DRAFT, nullable=False)
+    scheduled_at = Column(DateTime(timezone=True), nullable=True)
     sent_at = Column(DateTime(timezone=True), nullable=True)
     success_count = Column(Integer, nullable=True)
     failure_count = Column(Integer, nullable=True)
     created_by_admin_id = Column(Integer, ForeignKey("admins.id"), nullable=False)
 
     created_by = relationship("Admin")
-

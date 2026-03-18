@@ -1,15 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchCurrentUser, login as apiLogin, logout as apiLogout } from '../api/auth';
 import { acceptInvite as acceptInviteApi } from '../api/invites';
-
-const AuthContext = createContext({
-  user: null,
-  loading: true,
-  login: async () => {},
-  logout: () => {},
-  completeInvite: async () => {},
-  refreshProfile: async () => {},
-});
+import { AuthContext } from './auth-context';
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -77,10 +69,6 @@ function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }
 
 export { AuthProvider };

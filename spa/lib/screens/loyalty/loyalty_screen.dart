@@ -7,7 +7,6 @@ import '../../services/loyalty_service.dart';
 import '../../services/user_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/loyalty.dart';
-import '../../models/user.dart';
 import '../../routes/route_names.dart';
 import '../../widgets/app_bottom_nav.dart';
 
@@ -115,10 +114,11 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
         );
     }
   }
-  
+
   Color _parseColor(String hex) {
     try {
-      return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
+      return Color(
+          int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
     } catch (e) {
       return AppColors.buttonPrimary;
     }
@@ -179,12 +179,14 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                               const SizedBox(height: 24),
                               ElevatedButton(
                                 onPressed: () {
-                                  Navigator.of(context).pushReplacementNamed(RouteNames.registration);
+                                  Navigator.of(context).pushReplacementNamed(
+                                      RouteNames.registration);
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.buttonPrimary,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 32, vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -239,7 +241,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                         onRefresh: _loadLoyaltyInfo,
                         child: SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -253,6 +256,9 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
 
                               // Текущий уровень (карточка статуса)
                               _buildCurrentLevelCard(_loyaltyInfo!),
+                              const SizedBox(height: 24),
+
+                              _buildHistoryCard(),
                               const SizedBox(height: 24),
 
                               // Прогресс до следующего уровня
@@ -376,119 +382,135 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           ),
           child: Column(
             children: [
-              // Линия с делениями
+              // Линия с делениями + карточки уровней (без "съезжания" на маленьких экранах)
               Builder(
                 builder: (context) {
+                  const levelTileWidth = 120.0;
                   final currentLevelName = info.currentLevel?.name ?? '0';
-                  // Ищем индекс текущего уровня, сравнивая по имени (может быть "0", "1" или "Уровень 0", "Уровень 1")
                   final currentLevelIndex = levels.indexWhere((l) {
-                    final levelTitle = l.title.toLowerCase().replaceAll('уровень ', '').trim();
+                    final levelTitle =
+                        l.title.toLowerCase().replaceAll('уровень ', '').trim();
                     final currentName = currentLevelName.toLowerCase().trim();
-                    return levelTitle == currentName || l.title == currentLevelName;
+                    return levelTitle == currentName ||
+                        l.title == currentLevelName;
                   });
-                  
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: List.generate(levels.length, (index) {
-                      final isLast = index == levels.length - 1;
-                      final isCurrent = index == currentLevelIndex;
-                      return Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: isCurrent ? 12 : 10,
-                              height: isCurrent ? 12 : 10,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isCurrent ? AppColors.buttonPrimary : AppColors.borderLight,
-                                border: isCurrent ? null : Border.all(
-                                  color: AppColors.borderLight,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                            if (!isLast)
-                              Expanded(
-                                child: Container(
-                                  height: 2,
-                                  color: AppColors.borderLight,
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    }),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              // Карточки уровней
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: levels.map((level) {
-                  return Expanded(
+
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          level.title,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.buttonPrimary.withOpacity(0.06),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '+${level.cashbackPercent}%',
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.heading3.copyWith(
-                                  color: AppColors.buttonPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: List.generate(levels.length, (index) {
+                            final isLast = index == levels.length - 1;
+                            final isCurrent = index == currentLevelIndex;
+                            return SizedBox(
+                              width: levelTileWidth,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: isCurrent ? 12 : 10,
+                                    height: isCurrent ? 12 : 10,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isCurrent
+                                          ? AppColors.buttonPrimary
+                                          : AppColors.borderLight,
+                                      border: isCurrent
+                                          ? null
+                                          : Border.all(
+                                              color: AppColors.borderLight,
+                                              width: 2,
+                                            ),
+                                    ),
+                                  ),
+                                  if (!isLast)
+                                    Expanded(
+                                      child: Container(
+                                        height: 2,
+                                        color: AppColors.borderLight,
+                                      ),
+                                    ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'кэшбэк на\nспа-терапию',
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11,
-                                  height: 1.2,
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          }),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Потратить сумму от ${_formatRub(level.threshold)}',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                          ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: levels.map((level) {
+                            return SizedBox(
+                              width: levelTileWidth,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    level.title,
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.buttonPrimary
+                                          .withOpacity(0.06),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '+${level.cashbackPercent}%',
+                                          textAlign: TextAlign.center,
+                                          style:
+                                              AppTextStyles.heading3.copyWith(
+                                            color: AppColors.buttonPrimary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'кэшбэк на\nспа-терапию',
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          style:
+                                              AppTextStyles.bodySmall.copyWith(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 11,
+                                            height: 1.2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Потратить сумму от ${_formatRub(level.threshold)}',
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ],
                     ),
                   );
-                }).toList(),
+                },
               ),
             ],
           ),
@@ -505,7 +527,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     if (rubles < 200000) return 3;
     return 4;
   }
-  
+
   Widget _buildCurrentLevelCard(LoyaltyInfo info) {
     final level = info.currentLevel;
     final nextLevel = info.nextLevel;
@@ -549,7 +571,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     // Используем цвета из AppColors для градиента.
     // Берём номер уровня из имени (\"0\"..\"4\"), иначе считаем по потраченным рублям (minBonuses).
     final levelName = level.name;
-    final levelNum = int.tryParse(levelName) ?? _getLevelNumber(level.minBonuses);
+    final levelNum =
+        int.tryParse(levelName) ?? _getLevelNumber(level.minBonuses);
     final gradient = _getLevelGradient(levelNum);
     final levelColor = AppColors.buttonPrimary;
 
@@ -617,10 +640,82 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     );
   }
 
+  Widget _buildHistoryCard() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Ваша история в PRIRODA SPA'),
+        const SizedBox(height: 16),
+        InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () =>
+              Navigator.of(context).pushNamed(RouteNames.loyaltyHistory),
+          child: Ink(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.buttonPrimary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.history,
+                    color: AppColors.buttonPrimary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'История начислений и сгорания',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Откройте, чтобы посмотреть все операции по бонусам',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: AppColors.textSecondary,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildProgressSection(LoyaltyInfo info) {
     final currentLevel = info.currentLevel;
     final nextLevel = info.nextLevel;
-    
+
     if (nextLevel == null || currentLevel == null) {
       return const SizedBox.shrink();
     }
@@ -809,7 +904,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Не удалось сохранить настройку: ${e.toString()}'),
+                      content: Text(
+                          'Не удалось сохранить настройку: ${e.toString()}'),
                       backgroundColor: AppColors.error,
                     ),
                   );

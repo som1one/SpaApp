@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Настройки Firebase для проекта PrirodaSpa.
 class DefaultFirebaseOptions {
@@ -28,30 +29,28 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCC8JymziU3p-sgZjpr_6SV24Z_DGMxSAk',
-    appId: '1:7382336719:android:b98838e7c83cb8143f63ba',
-    messagingSenderId: '7382336719',
-    projectId: 'prirodaspa-74540',
-    storageBucket: 'prirodaspa-74540.firebasestorage.app',
+    apiKey: 'AIzaSyCVK2ZT6vK2rTWFH0nPWO5rEu1K-JLLf_o',
+    appId: '1:1083357348512:android:c0193f7597881ccc1bbfc5',
+    messagingSenderId: '1083357348512',
+    projectId: 'spaapp-c870f',
+    storageBucket: 'spaapp-c870f.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBHIxrt9s5l5vaAezbZ5XFwyr_HcCQqV34',
-    appId: '1:7382336719:ios:02bac34d8ef384bc3f63ba',
-    messagingSenderId: '7382336719',
-    projectId: 'prirodaspa-74540',
-    storageBucket: 'prirodaspa-74540.firebasestorage.app',
-    iosClientId: '7382336719-nn6c6hpcfkkqk3s1c5i8f9poshiobcnp.apps.googleusercontent.com',
+    apiKey: 'AIzaSyBEgP7CCT0Q5_aW6g4dXkyVYfW5FeIsLco',
+    appId: '1:1083357348512:ios:e809ee1a3ba7803c1bbfc5',
+    messagingSenderId: '1083357348512',
+    projectId: 'spaapp-c870f',
+    storageBucket: 'spaapp-c870f.firebasestorage.app',
     iosBundleId: 'ru.prirodaspa.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBHIxrt9s5l5vaAezbZ5XFwyr_HcCQqV34',
-    appId: '1:7382336719:ios:02bac34d8ef384bc3f63ba',
-    messagingSenderId: '7382336719',
-    projectId: 'prirodaspa-74540',
-    storageBucket: 'prirodaspa-74540.firebasestorage.app',
-    iosClientId: '7382336719-nn6c6hpcfkkqk3s1c5i8f9poshiobcnp.apps.googleusercontent.com',
-    iosBundleId: 'ru.prirodaspa.app',
+    apiKey: 'AIzaSyBEgP7CCT0Q5_aW6g4dXkyVYfW5FeIsLco',
+    appId: '1:1083357348512:ios:fde0ffc924e5dca31bbfc5',
+    messagingSenderId: '1083357348512',
+    projectId: 'spaapp-c870f',
+    storageBucket: 'spaapp-c870f.firebasestorage.app',
+    iosBundleId: 'com.example.spa',
   );
 }

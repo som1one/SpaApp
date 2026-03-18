@@ -55,6 +55,11 @@ export const updateLoyaltySettings = async (payload) => {
   return response.data;
 };
 
+export const bulkAwardLoyalty = async (payload) => {
+  const response = await apiClient.post('/admin/loyalty/award-all', payload);
+  return response.data;
+};
+
 export const getUserByCode = async (uniqueCode) => {
   const response = await apiClient.get(`/admin/loyalty/users/by-code/${uniqueCode}`);
   return response.data;

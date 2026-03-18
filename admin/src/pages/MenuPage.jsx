@@ -18,7 +18,7 @@ import {
   Upload,
   message,
 } from 'antd';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -284,7 +284,7 @@ const MenuPage = () => {
           message.success('Удалено');
           clearSelections();
           loadTree();
-        } catch (error) {
+        } catch {
           message.error('Не удалось удалить выбранные услуги');
         }
       },
@@ -1015,5 +1015,4 @@ const ServicePreview = ({ data }) => (
 );
 
 export default MenuPage;
-
 

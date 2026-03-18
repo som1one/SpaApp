@@ -3,16 +3,17 @@ import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 import 'app.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/storage_service.dart';
-import 'services/push_service.dart';
 
 // Условный импорт для Firebase Messaging (только для мобильных)
-import 'package:firebase_messaging/firebase_messaging.dart' if (dart.library.html) 'services/firebase_messaging_stub.dart' as messaging;
+import 'package:firebase_messaging/firebase_messaging.dart'
+    if (dart.library.html) 'services/firebase_messaging_stub.dart' as messaging;
 
 bool get _isFirebaseSupportedPlatform {
   if (kIsWeb) return false;
@@ -26,9 +27,11 @@ bool get _isFirebaseSupportedPlatform {
   }
 }
 
-Future<void> _firebaseMessagingBackgroundHandler(messaging.RemoteMessage message) async {
+Future<void> _firebaseMessagingBackgroundHandler(
+    messaging.RemoteMessage message) async {
   if (_isFirebaseSupportedPlatform && Firebase.apps.isEmpty) {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
   }
 }
 
@@ -45,28 +48,31 @@ Future<void> main() async {
 
     // Показываем явный экран ошибки вместо "белого экрана" в релизе.
     ErrorWidget.builder = (FlutterErrorDetails details) {
-      return Material(
-        color: const Color(0xFFF7F6F2),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.error_outline, size: 44, color: Color(0xFFE53935)),
-                SizedBox(height: 12),
-                Text(
-                  'Произошла ошибка при запуске приложения',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Попробуйте перезапустить приложение.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14),
-                ),
-              ],
+      return Directionality(
+        textDirection: TextDirection.ltr,
+        child: Material(
+          color: const Color(0xFFF7F6F2),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.error_outline, size: 44, color: Color(0xFFE53935)),
+                  SizedBox(height: 12),
+                  Text(
+                    'Произошла ошибка при запуске приложения',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Попробуйте перезапустить приложение.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -111,7 +117,8 @@ Future<void> _initInBackground() async {
     // Push-уведомления работают только на мобильных платформах
     if (_isFirebaseSupportedPlatform) {
       try {
-        messaging.FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+        messaging.FirebaseMessaging.onBackgroundMessage(
+            _firebaseMessagingBackgroundHandler);
       } catch (e) {
         debugPrint('⚠️ Ошибка инициализации Firebase Messaging: $e');
       }
@@ -130,15 +137,6 @@ Future<void> _initInBackground() async {
     debugPrint('⚠️ Ошибка восстановления сессии: $e');
   }
 
-  // PushService инициализируется в restoreSession() если пользователь залогинен
-  // Если пользователь не залогинен, инициализируем PushService отдельно
-  try {
-    if (_isFirebaseSupportedPlatform && Firebase.apps.isNotEmpty && !AuthService().isAuthenticated) {
-      await PushService().init();
-      debugPrint('✅ PushService initialized (user not authenticated)');
-    }
-  } catch (e) {
-    debugPrint('⚠️ Ошибка инициализации PushService: $e');
-  }
+  // PushService инициализируется в restoreSession() для авторизованного пользователя.
+  // На экране регистрации не запрашиваем разрешение на уведомления, чтобы не блокировать старт.
 }
-

@@ -2,7 +2,7 @@ import { Card, Input, Select, Space, Table, Tag, Typography, message } from 'ant
 import dayjs from '../utils/dayjs';
 import { useEffect, useState } from 'react';
 import { fetchAudit } from '../api/audit';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 const actionLabels = {
   create_category: 'Создание категории',
