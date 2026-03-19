@@ -1,7 +1,7 @@
 """add loyalty settings and history
 
 Revision ID: 20260318_01_add_loyalty_settings_and_history
-Revises: 20260317_01_add_notification_category_and_schedule
+Revises: 20260317_01
 Create Date: 2026-03-18 12:00:00.000000
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "20260318_01_add_loyalty_settings_and_history"
-down_revision = "20260317_01_add_notification_category_and_schedule"
+down_revision = "20260317_01"
 branch_labels = None
 depends_on = None
 
