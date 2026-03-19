@@ -60,10 +60,8 @@ class CustomContentService {
             .whereType<Map<String, dynamic>>()
             .map(CustomContentBlock.fromJson)
             .toList();
-        if (blocks.isNotEmpty) {
-          await _saveCache(blocks);
-          return blocks;
-        }
+        await _saveCache(blocks);
+        return blocks;
       }
       return cached;
     } catch (_) {

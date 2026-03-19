@@ -390,8 +390,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildTopSection(),
                 _buildLoyaltyCard(),
                 const SizedBox(height: 32),
-                PopularJourneyCarousel(items: journeyItems),
-                const SizedBox(height: 32),
+                if (journeyItems.isNotEmpty) ...[
+                  PopularJourneyCarousel(items: journeyItems),
+                  const SizedBox(height: 32),
+                ],
                 if (contentBlocks.isNotEmpty) ...[
                   _buildCustomContentBlocks(contentBlocks),
                   const SizedBox(height: 32),

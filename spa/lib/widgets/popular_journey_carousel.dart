@@ -24,31 +24,7 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
   int _currentPage = 0;
   Timer? _autoSlideTimer;
 
-  late final List<PopularJourneyItem> _journeys = widget.items?.isNotEmpty ==
-          true
-      ? widget.items!
-      : const [
-          PopularJourneyItem(
-            imageAssetPath: 'assets/images/Home/IMG_2918.png',
-            title: 'Клубная карта WELLNESS PRIRODA',
-            subtitle:
-                'Привилегии и специальные предложения для постоянных гостей.',
-            url: 'https://prirodaspa.ru/abonement-offer',
-          ),
-          PopularJourneyItem(
-            imageAssetPath: 'assets/images/Home/IMG2919.png',
-            title: 'Спа-терапия, зашитая в отдых',
-            subtitle:
-                'Комплексные программы для полного восстановления и релакса.',
-            url: 'https://prirodaspa.ru/spa-program',
-          ),
-          PopularJourneyItem(
-            imageAssetPath: 'assets/images/Home/IMG2928.png',
-            title: 'Конструктор спа-программы',
-            subtitle: 'Создайте индивидуальную программу под ваши потребности.',
-            url: 'https://prirodaspa.ru/contructor',
-          ),
-        ];
+  late final List<PopularJourneyItem> _journeys = widget.items ?? const [];
 
   @override
   void dispose() {
@@ -79,6 +55,10 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    if (_journeys.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
