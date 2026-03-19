@@ -258,9 +258,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                               _buildCurrentLevelCard(_loyaltyInfo!),
                               const SizedBox(height: 24),
 
-                              _buildHistoryCard(),
-                              const SizedBox(height: 24),
-
                               // Прогресс до следующего уровня
                               if (_loyaltyInfo!.nextLevel != null) ...[
                                 _buildProgressSection(_loyaltyInfo!),
@@ -530,40 +527,15 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
 
   Widget _buildCurrentLevelCard(LoyaltyInfo info) {
     final level = info.currentLevel;
-    final nextLevel = info.nextLevel;
     if (level == null) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.buttonPrimary,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.eco, color: Colors.white, size: 28),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Начало пути',
-                    style: AppTextStyles.heading3.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Накоплено ${info.currentBonuses} бонусов',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+      return _buildHistoryLevelCard(
+        title: 'Ваша история',
+        subtitle: 'Накоплено ${info.currentBonuses} бонусов',
+        icon: Icons.history,
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       );
     }
@@ -574,141 +546,93 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     final levelNum =
         int.tryParse(levelName) ?? _getLevelNumber(level.minBonuses);
     final gradient = _getLevelGradient(levelNum);
-    final levelColor = AppColors.buttonPrimary;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: levelColor.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              _parseIcon(level.icon),
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Уровень $levelName',
-                  style: AppTextStyles.heading3.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Накоплено ${info.currentBonuses} бонусов',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-                if (nextLevel != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ваш путь к Уровню ${nextLevel.name}!',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+    return _buildHistoryLevelCard(
+      title: 'Уровень $levelName',
+      subtitle: 'Накоплено ${info.currentBonuses} бонусов',
+      caption: 'Ваша история бонусов',
+      icon: _parseIcon(level.icon),
+      gradient: gradient,
     );
   }
 
-  Widget _buildHistoryCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Ваша история в PRIRODA SPA'),
-        const SizedBox(height: 16),
-        InkWell(
+  Widget _buildHistoryLevelCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required LinearGradient gradient,
+    String? caption,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => Navigator.of(context).pushNamed(RouteNames.loyaltyHistory),
+      child: Ink(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: gradient,
           borderRadius: BorderRadius.circular(20),
-          onTap: () =>
-              Navigator.of(context).pushNamed(RouteNames.loyaltyHistory),
-          child: Ink(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 14,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.buttonPrimary.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.buttonPrimary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.history,
-                    color: AppColors.buttonPrimary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'История начислений и сгорания',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Откройте, чтобы посмотреть все операции по бонусам',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  color: AppColors.textSecondary,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
-      ],
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.heading3.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                  if (caption != null && caption.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      caption,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.white.withOpacity(0.82),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white.withOpacity(0.92),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -922,8 +846,13 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   String _formatRub(int amount) => '${_rubFormatter.format(amount)} ₽';
 
   List<_TimelineLevel> _buildTimelineLevels(LoyaltyInfo info) {
-    final dynamicLevels = info.levels.where((level) => level.isActive).toList()
-      ..sort((a, b) => a.minBonuses.compareTo(b.minBonuses));
+    final dynamicLevels = [...info.levels]..sort((a, b) {
+        final byOrder = a.orderIndex.compareTo(b.orderIndex);
+        if (byOrder != 0) {
+          return byOrder;
+        }
+        return a.minBonuses.compareTo(b.minBonuses);
+      });
 
     if (dynamicLevels.isNotEmpty) {
       return dynamicLevels

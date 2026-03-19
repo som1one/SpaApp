@@ -9,6 +9,7 @@ from enum import Enum
 class ContentBlockTypeEnum(str, Enum):
     """Типы блоков контента"""
     SPA_TRAVEL = "spa_travel"
+    SPA_THERAPY_FEATURE = "spa_therapy_feature"
     PROMOTION = "promotion"
     BANNER = "banner"
     CUSTOM = "custom"
@@ -67,4 +68,3 @@ class CustomContentBlockUpdate(BaseModel):
     text_color: Optional[str] = None
     gradient_start: Optional[str] = None
     gradient_end: Optional[str] = None
-

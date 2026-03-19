@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Card,
   Form,
@@ -12,7 +13,6 @@ import {
   Typography,
   Switch,
   message,
-  ColorPicker,
 } from 'antd';
 import { useAuth } from '../context/useAuth';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -25,10 +25,17 @@ import {
 
 const blockTypeOptions = [
   { value: 'spa_travel', label: 'Популярные SPA (карусель)' },
+  { value: 'spa_therapy_feature', label: 'SPA терапия (3 фиксированные карточки)' },
   { value: 'promotion', label: 'Акция' },
   { value: 'banner', label: 'Баннер' },
   { value: 'custom', label: 'Кастомный' },
 ];
+
+const spaTherapyTitles = {
+  0: 'Подарочные сертификаты',
+  1: 'Спа-меню',
+  2: 'Каталог товаров',
+};
 
 const CustomContentPage = () => {
   const { user } = useAuth();
@@ -38,6 +45,9 @@ const CustomContentPage = () => {
   const [modalInitial, setModalInitial] = useState(null);
   const [form] = Form.useForm();
   const isSuperAdmin = user?.role === 'super_admin';
+  const selectedType = Form.useWatch('block_type', form);
+  const selectedOrderIndex = Form.useWatch('order_index', form);
+  const isSpaTherapyFeature = selectedType === 'spa_therapy_feature';
 
   const loadBlocks = useCallback(async () => {
     try {
@@ -58,6 +68,16 @@ const CustomContentPage = () => {
     }
     loadBlocks();
   }, [isSuperAdmin, loadBlocks]);
+
+  useEffect(() => {
+    if (!modalOpen || !isSpaTherapyFeature) {
+      return;
+    }
+
+    const normalizedOrder = Number(selectedOrderIndex ?? 0);
+    form.setFieldValue('title', spaTherapyTitles[normalizedOrder] ?? spaTherapyTitles[0]);
+    form.setFieldValue('is_active', true);
+  }, [form, isSpaTherapyFeature, modalOpen, selectedOrderIndex]);
 
   const handleOpenModal = useCallback((record) => {
     setModalInitial(record || null);
@@ -90,11 +110,18 @@ const CustomContentPage = () => {
 
   const handleSubmit = async (values) => {
     try {
+      const payload = { ...values };
+      if (payload.block_type === 'spa_therapy_feature') {
+        payload.order_index = Number(payload.order_index ?? 0);
+        payload.title = spaTherapyTitles[payload.order_index];
+        payload.is_active = true;
+      }
+
       if (modalInitial) {
-        await updateCustomContentBlock(modalInitial.id, values);
+        await updateCustomContentBlock(modalInitial.id, payload);
         message.success('Блок обновлён');
       } else {
-        await createCustomContentBlock(values);
+        await createCustomContentBlock(payload);
         message.success('Блок создан');
       }
       setModalOpen(false);
@@ -161,14 +188,16 @@ const CustomContentPage = () => {
             <Button size="small" type="link" onClick={() => handleOpenModal(record)}>
               Редактировать
             </Button>
-            <Button
-              size="small"
-              type="link"
-              danger
-              onClick={() => handleDelete(record)}
-            >
-              Удалить
-            </Button>
+            {record.block_type !== 'spa_therapy_feature' && (
+              <Button
+                size="small"
+                type="link"
+                danger
+                onClick={() => handleDelete(record)}
+              >
+                Удалить
+              </Button>
+            )}
           </Space>
         ),
       },
@@ -200,6 +229,10 @@ const CustomContentPage = () => {
           Управление кастомными блоками контента, которые отображаются на главном экране приложения.
           Можно создавать блоки с изображениями, текстом, ссылками и настраивать их внешний вид.
         </Typography.Paragraph>
+        <Typography.Paragraph type="secondary">
+          Для блока <strong>SPA терапия</strong> используются 3 фиксированные карточки:
+          названия и количество слотов менять нельзя, можно редактировать только подписи, ссылки и оформление.
+        </Typography.Paragraph>
         <Table
           rowKey="id"
           loading={loading}
@@ -227,12 +260,22 @@ const CustomContentPage = () => {
           form={form}
           onFinish={handleSubmit}
         >
+          {isSpaTherapyFeature && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="SPA терапия — 3 фиксированные карточки"
+              description="Слот 0: Подарочные сертификаты, слот 1: Спа-меню, слот 2: Каталог товаров. Удалить, скрыть или переименовать их нельзя."
+            />
+          )}
           <Form.Item
             label="Заголовок"
             name="title"
             rules={[{ required: true, message: 'Введите заголовок' }]}
+            extra={isSpaTherapyFeature ? 'Название фиксируется автоматически по слоту.' : null}
           >
-            <Input placeholder="Например, Spa-путешествия" />
+            <Input placeholder="Например, Spa-путешествия" disabled={isSpaTherapyFeature} />
           </Form.Item>
           <Form.Item
             label="Подзаголовок"
@@ -275,14 +318,18 @@ const CustomContentPage = () => {
             label="Порядок отображения"
             name="order_index"
           >
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <InputNumber
+              min={0}
+              max={isSpaTherapyFeature ? 2 : undefined}
+              style={{ width: '100%' }}
+            />
           </Form.Item>
           <Form.Item
             label="Активен"
             name="is_active"
             valuePropName="checked"
           >
-            <Switch />
+            <Switch disabled={isSpaTherapyFeature} />
           </Form.Item>
           <Form.Item
             label="Цвет фона (HEX)"

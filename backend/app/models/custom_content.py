@@ -9,6 +9,7 @@ import enum
 class ContentBlockType(enum.Enum):
     """Типы блоков контента"""
     SPA_TRAVEL = "spa_travel"  # Spa-путешествия
+    SPA_THERAPY_FEATURE = "spa_therapy_feature"  # 3 фиксированные карточки SPA-терапии
     PROMOTION = "promotion"  # Акция
     BANNER = "banner"  # Баннер
     CUSTOM = "custom"  # Кастомный блок
@@ -34,4 +35,3 @@ class CustomContentBlock(BaseModel):
     
     def __repr__(self):
         return f"<CustomContentBlock {self.title}>"
-

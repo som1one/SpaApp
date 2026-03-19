@@ -31,9 +31,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const String _adminSupportName = 'Макс';
   static const String _adminSupportPhone = '+79006870737';
-  static const String _adminSupportPhoneDisplay = '+7 900 687-07-37';
+  static const String _techSupportTelegramUrl = 'https://t.me/priroda_spa';
 
   final _apiService = ApiService();
   final _authService = AuthService();
@@ -76,61 +75,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _showSupportSheet() async {
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Тех поддержка',
-                style: AppTextStyles.heading3.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Контакт: $_adminSupportName',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _adminSupportPhoneDisplay,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _openDialer(_adminSupportPhone);
-                  },
-                  icon: const Icon(Icons.call_outlined),
-                  label: const Text('Позвонить в администрацию'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  Future<void> _openTechSupportTelegram() async {
+    final uri = Uri.parse(_techSupportTelegramUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось открыть Telegram')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось открыть Telegram')),
+        );
+      }
+    }
   }
 
   Future<void> _showEditProfileSheet() async {
@@ -442,7 +403,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               _QuickLinks(
                                 onSettings: () => Navigator.of(context)
                                     .pushNamed(RouteNames.settings),
-                                onSupport: _showSupportSheet,
+                                onSupport: _openTechSupportTelegram,
+                                onCallAdmin: () =>
+                                    _openDialer(_adminSupportPhone),
                               ),
                               const SizedBox(height: 100),
                             ],
@@ -1423,10 +1386,12 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
 class _QuickLinks extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback onSupport;
+  final VoidCallback onCallAdmin;
 
   const _QuickLinks({
     required this.onSettings,
     required this.onSupport,
+    required this.onCallAdmin,
   });
 
   @override
@@ -1458,8 +1423,15 @@ class _QuickLinks extends StatelessWidget {
         _QuickLinkTile(
           icon: Icons.help_outline,
           title: 'Тех поддержка',
-          subtitle: 'Макс · +7 900 687-07-37',
+          subtitle: '@priroda_spa в Telegram',
           onTap: onSupport,
+        ),
+        const SizedBox(height: 12),
+        _QuickLinkTile(
+          icon: Icons.call_outlined,
+          title: 'Позвонить в администрацию',
+          subtitle: '+7 900 687-07-37',
+          onTap: onCallAdmin,
         ),
       ],
     );
