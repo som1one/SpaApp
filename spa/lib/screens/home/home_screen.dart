@@ -47,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isLoadingCustomBlocks = true;
   bool _hasCheckedBooking = false;
   static const String _journeyBlockType = 'spa_travel';
-  static const String _spaTherapyFeatureBlockType = 'spa_therapy_feature';
 
   @override
   void initState() {
@@ -373,13 +372,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         .where((item) => item.title.trim().isNotEmpty)
         .toList();
 
-    final contentBlocks = _customBlocks
-        .where(
-          (b) =>
-              b.blockType != _journeyBlockType &&
-              b.blockType != _spaTherapyFeatureBlockType,
-        )
-        .toList();
+    final contentBlocks =
+        _customBlocks.where((b) => b.blockType != _journeyBlockType).toList();
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -788,8 +782,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildActionButtons() {
-    final actionCards = _buildSpaTherapyCards();
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
@@ -806,126 +798,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
           const SizedBox(height: 20),
-          ...List.generate(actionCards.length, (index) {
-            final card = actionCards[index];
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: index == actionCards.length - 1 ? 0 : 16,
-              ),
-              child: _buildActionCard(
-                title: card.title,
-                subtitle: card.subtitle,
-                icon: card.icon,
-                gradient: card.gradient,
-                onPressed: card.actionUrl == null || card.actionUrl!.isEmpty
-                    ? null
-                    : () => _openExternalUrl(card.actionUrl!),
-              ),
-            );
-          }),
+          _buildActionCard(
+            title: 'Подарочные сертификаты',
+            subtitle: 'Идеальный подарок для близких',
+            icon: Icons.card_giftcard_rounded,
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onPressed: () =>
+                _openExternalUrl('https://prirodaspa.ru/gift-sertificate'),
+          ),
+          const SizedBox(height: 16),
+          _buildActionCard(
+            title: 'Спа-меню',
+            subtitle: 'Выгодные условия на курсы процедур',
+            icon: Icons.local_florist_rounded,
+            gradient: const LinearGradient(
+              colors: [AppColors.primaryLight, AppColors.primary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onPressed: () => _openExternalUrl('https://prirodaspa.ru/spa-menu'),
+          ),
+          const SizedBox(height: 16),
+          _buildActionCard(
+            title: 'Каталог товаров',
+            subtitle: 'Профессиональная косметика для дома',
+            icon: Icons.shopping_bag_rounded,
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onPressed: () => _openExternalUrl(
+                'https://priroda-therapy.ru/priroda-spa-catalog'),
+          ),
         ],
       ),
     );
-  }
-
-  List<_SpaTherapyActionCard> _buildSpaTherapyCards() {
-    final blocksBySlot = <int, CustomContentBlock>{};
-    for (final block in _customBlocks) {
-      if (block.blockType != _spaTherapyFeatureBlockType) {
-        continue;
-      }
-      if (block.orderIndex < 0 || block.orderIndex > 2) {
-        continue;
-      }
-      blocksBySlot[block.orderIndex] = block;
-    }
-
-    final defaults = <_SpaTherapyActionCard>[
-      const _SpaTherapyActionCard(
-        title: 'Подарочные сертификаты',
-        subtitle: 'Идеальный подарок для близких',
-        icon: Icons.card_giftcard_rounded,
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        actionUrl: 'https://prirodaspa.ru/gift-sertificate',
-      ),
-      const _SpaTherapyActionCard(
-        title: 'Спа-меню',
-        subtitle: 'Выгодные условия на курсы процедур',
-        icon: Icons.local_florist_rounded,
-        gradient: LinearGradient(
-          colors: [AppColors.primaryLight, AppColors.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        actionUrl: 'https://prirodaspa.ru/spa-menu',
-      ),
-      const _SpaTherapyActionCard(
-        title: 'Каталог товаров',
-        subtitle: 'Профессиональная косметика для дома',
-        icon: Icons.shopping_bag_rounded,
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        actionUrl: 'https://priroda-therapy.ru/priroda-spa-catalog',
-      ),
-    ];
-
-    return List.generate(defaults.length, (index) {
-      final fallback = defaults[index];
-      final block = blocksBySlot[index];
-      if (block == null) {
-        return fallback;
-      }
-
-      return _SpaTherapyActionCard(
-        title: fallback.title,
-        subtitle: (block.subtitle ?? '').trim().isEmpty
-            ? fallback.subtitle
-            : block.subtitle!,
-        icon: fallback.icon,
-        gradient: _resolveSpaTherapyGradient(block, fallback.gradient),
-        actionUrl: (block.actionUrl ?? '').trim().isEmpty
-            ? fallback.actionUrl
-            : block.actionUrl,
-      );
-    });
-  }
-
-  LinearGradient _resolveSpaTherapyGradient(
-    CustomContentBlock block,
-    LinearGradient fallback,
-  ) {
-    final start =
-        block.gradientStart != null ? _parseColor(block.gradientStart!) : null;
-    final end =
-        block.gradientEnd != null ? _parseColor(block.gradientEnd!) : null;
-    final background = block.backgroundColor != null
-        ? _parseColor(block.backgroundColor!)
-        : null;
-
-    if (start != null && end != null) {
-      return LinearGradient(
-        colors: [start, end],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    }
-
-    if (background != null) {
-      return LinearGradient(
-        colors: [background, background.withOpacity(0.88)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    }
-
-    return fallback;
   }
 
   Widget _buildActionCard({
@@ -1232,20 +1144,4 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return null;
     }
   }
-}
-
-class _SpaTherapyActionCard {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final LinearGradient gradient;
-  final String? actionUrl;
-
-  const _SpaTherapyActionCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.gradient,
-    required this.actionUrl,
-  });
 }
