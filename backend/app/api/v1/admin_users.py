@@ -36,7 +36,6 @@ def _build_users_query(
                     User.email.ilike(f"%{search_lower}%"),
                     User.name.ilike(f"%{search_lower}%"),
                     User.surname.ilike(f"%{search_lower}%"),
-                    User.unique_code.ilike(f"%{search_lower.upper()}%"),
                 )
             )
 
@@ -156,7 +155,6 @@ async def export_users_excel(
 
     headers = [
         "ID",
-        "Код",
         "Имя",
         "Фамилия",
         "Email",
@@ -174,7 +172,6 @@ async def export_users_excel(
         worksheet.append(
             [
                 user.id,
-                user.unique_code or "",
                 user.name or "",
                 user.surname or "",
                 user.email or "",

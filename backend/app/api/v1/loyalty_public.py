@@ -7,17 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.models.booking import Booking, BookingStatus
-from app.models.loyalty import LoyaltyLevel, LoyaltyBonus, LoyaltyTransaction
+from app.models.loyalty import LoyaltyLevel, LoyaltyTransaction
 from pydantic import BaseModel
 from app.schemas.loyalty import (
-    LoyaltyBonusResponse,
     LoyaltyHistoryResponse,
     LoyaltyInfoResponse,
     LoyaltyLevelResponse,
     LoyaltyTransactionResponse,
 )
-from app.services.loyalty_service import expire_loyalty_transactions
+from app.services.loyalty_service import (
+    expire_loyalty_transactions,
+    get_user_total_spent_cents,
+    refresh_user_loyalty_level,
+)
 
 router = APIRouter(prefix="/loyalty", tags=["Loyalty"])
 logger = logging.getLogger(__name__)
@@ -39,40 +41,22 @@ async def get_loyalty_info(
 
     bonuses = user.loyalty_bonuses or 0
     spent_bonuses = user.spent_bonuses or 0
-    
-    # Считаем траты пользователя (рубли) по всем НЕотменённым записям.
-    # Раньше учитывались только COMPLETED, из‑за чего прогресс часто был 0.
-    bookings = (
-        db.query(Booking)
-        .filter(
-            Booking.user_id == user.id,
-            Booking.status != BookingStatus.CANCELLED,
-            Booking.service_price.isnot(None),
-        )
-        .all()
-    )
-    
-    total_spent_cents = sum((booking.service_price or 0) for booking in bookings)
+    total_spent_cents = get_user_total_spent_cents(db, user)
     total_spent_rub = total_spent_cents // 100
+    current_level = refresh_user_loyalty_level(db, user)
+    db.commit()
+    db.refresh(user)
     
     logger.debug(
-        f"Траты пользователя {user.id}: "
-        f"записей={len(bookings)}, "
-        f"total_spent_cents={total_spent_cents}, "
-        f"total_spent_rub={total_spent_rub}"
+        "Траты пользователя рассчитаны для экрана лояльности",
+        extra={
+            "user_id": user.id,
+            "total_spent_cents": total_spent_cents,
+            "total_spent_rub": total_spent_rub,
+            "current_level_id": current_level.id if current_level else None,
+        },
     )
-    
-    # Находим текущий уровень по тратам
-    current_level = (
-        db.query(LoyaltyLevel)
-        .filter(
-            LoyaltyLevel.is_active == True,
-            LoyaltyLevel.min_bonuses <= total_spent_rub,
-        )
-        .order_by(LoyaltyLevel.min_bonuses.desc())
-        .first()
-    )
-    
+
     # Находим следующий уровень
     next_level = None
     if current_level:
@@ -144,21 +128,6 @@ async def get_loyalty_info(
         f"Результат расчёта: amount_to_next={amount_to_next}, progress={progress}"
     )
     
-    # Получаем доступные бонусы
-    # Бонусы, которые доступны для текущего уровня или ниже
-    available_bonuses = []
-    if current_level:
-        bonuses_list = (
-            db.query(LoyaltyBonus)
-            .filter(
-                LoyaltyBonus.is_active == True,
-                (LoyaltyBonus.min_level_id.is_(None)) | (LoyaltyBonus.min_level_id <= current_level.id),
-            )
-            .order_by(LoyaltyBonus.order_index.asc(), LoyaltyBonus.id.asc())
-            .all()
-        )
-        available_bonuses = [LoyaltyBonusResponse.model_validate(b) for b in bonuses_list]
-    
     return LoyaltyInfoResponse(
         current_bonuses=bonuses,
         spent_bonuses=spent_bonuses,
@@ -166,7 +135,7 @@ async def get_loyalty_info(
         next_level=LoyaltyLevelResponse.model_validate(next_level) if next_level else None,
         bonuses_to_next=max(0, amount_to_next),  # Поле совместимости — теперь это рубли до следующего уровня
         progress=progress,
-        available_bonuses=available_bonuses,
+        available_bonuses=[],
         levels=[LoyaltyLevelResponse.model_validate(level) for level in all_levels],
     )
 

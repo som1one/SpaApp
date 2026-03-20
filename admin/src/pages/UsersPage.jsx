@@ -19,11 +19,10 @@ import {
 import { useAuth } from '../context/useAuth';
 import dayjs from '../utils/dayjs';
 import { useEffect, useMemo, useState } from 'react';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { exportUsersExcel, fetchUsers } from '../api/users';
 import { fetchBookings } from '../api/bookings';
 import { useDebounce } from '../hooks/useDebounce';
-import { adjustUserLoyalty, getUserByCode } from '../api/loyalty';
+import { adjustUserLoyalty } from '../api/loyalty';
 
 const UsersPage = () => {
   const { user } = useAuth();
@@ -43,18 +42,7 @@ const UsersPage = () => {
   const [adjustLoading, setAdjustLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [adjustForm] = Form.useForm();
-  const [codeSearchModalOpen, setCodeSearchModalOpen] = useState(false);
-  const [codeSearchLoading, setCodeSearchLoading] = useState(false);
-  const [codeSearchForm] = Form.useForm();
-  const [codeSearchResult, setCodeSearchResult] = useState(null);
   const isSuperAdmin = user?.role === 'super_admin';
-  const watchedServices = Form.useWatch('services', codeSearchForm) || [];
-  // Расчет бонусов для начисления: сумма услуг * процент кэшбэка уровня
-  const servicesTotal = watchedServices
-    .filter((service) => service?.service_name && service?.price_rub)
-    .reduce((sum, service) => sum + Number(service.price_rub || 0), 0);
-  const cashbackPercent = codeSearchResult?.cashback_percent || 3;
-  const bonusesToAward = Math.floor(servicesTotal * cashbackPercent / 100);
 
   const loadUserBookings = async (userId) => {
     try {
@@ -142,90 +130,7 @@ const UsersPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
-  const handleCodeSearch = async (values) => {
-    try {
-      setCodeSearchLoading(true);
-      setCodeSearchResult(null);
-      const user = await getUserByCode(values.code.toUpperCase());
-      setCodeSearchResult(user);
-      message.success('Пользователь найден');
-    } catch (error) {
-      message.error(error.response?.data?.detail || 'Пользователь не найден');
-      setCodeSearchResult(null);
-    } finally {
-      setCodeSearchLoading(false);
-    }
-  };
-
-  const handleAwardBonusesByCode = async (values) => {
-    if (!codeSearchResult) {
-      message.error('Сначала найдите пользователя по коду');
-      return;
-    }
-    
-    try {
-      setAdjustLoading(true);
-      const services = (values.services || []).filter(
-        (service) => service?.service_name && service?.price_rub,
-      );
-
-      const payload = {};
-      const messages = [];
-
-      // 1. Начисление бонусов за услуги
-      if (services.length > 0) {
-        const normalizedServices = services.map((service) => ({
-          name: service.service_name.trim(),
-          price_rub: Math.round(Number(service.price_rub)),
-        }));
-        const totalCost = normalizedServices.reduce((sum, service) => sum + service.price_rub, 0);
-
-        if (totalCost <= 0) {
-          message.error('Стоимость услуг должна быть больше нуля');
-          return;
-        }
-
-        payload.services = normalizedServices;
-        const cashbackPercent = codeSearchResult.cashback_percent || 3;
-        const bonusesToAward = Math.floor(totalCost * cashbackPercent / 100);
-        messages.push(`Начислено ${bonusesToAward} бонусов (${cashbackPercent}% от ${totalCost} ₽)`);
-      }
-
-      if (!payload.services) {
-        message.error('Укажите услуги для начисления бонусов');
-        return;
-      }
-
-      payload.reason = values.reason || (messages.length > 0 ? messages.join(' | ') : undefined);
-
-      const result = await adjustUserLoyalty(codeSearchResult.id, payload);
-      
-      const successMessages = [];
-      if (result.bonuses_awarded > 0) {
-        successMessages.push(`Начислено ${result.bonuses_awarded} бонусов`);
-      }
-      message.success(successMessages.join(' | '));
-      
-      setCodeSearchModalOpen(false);
-      codeSearchForm.resetFields();
-      setCodeSearchResult(null);
-      // Обновляем данные пользователя
-      const updatedUser = await getUserByCode(codeSearchResult.unique_code);
-      setCodeSearchResult(updatedUser);
-    } catch (error) {
-      message.error(error.response?.data?.detail || 'Ошибка при изменении бонусов');
-    } finally {
-      setAdjustLoading(false);
-    }
-  };
-
   const columns = useMemo(() => [
-    {
-      title: 'Код',
-      dataIndex: 'unique_code',
-      width: 100,
-      render: (code) => code ? <Tag color="blue">{code}</Tag> : '—',
-    },
     {
       title: 'Имя',
       dataIndex: 'name',
@@ -248,7 +153,7 @@ const UsersPage = () => {
     {
       title: 'Лояльность',
       dataIndex: 'loyalty_level',
-      render: (value) => (typeof value === 'number' ? `${value} баллов` : '—'),
+      render: (value) => (typeof value === 'number' ? `Уровень ${value}` : '—'),
     },
     {
       title: 'Статус',
@@ -354,9 +259,11 @@ const UsersPage = () => {
           style={{ width: 220 }}
           onChange={(value) => handleFilterChange('minLoyalty', value)}
           options={[
+            { value: 0, label: '0 и выше' },
             { value: 1, label: '1 и выше' },
             { value: 2, label: '2 и выше' },
-            { value: 3, label: '3 и выше (VIP)' },
+            { value: 3, label: '3 и выше' },
+            { value: 4, label: '4 и выше' },
           ]}
         />
       </Space>
@@ -405,11 +312,6 @@ const UsersPage = () => {
             <Descriptions column={1} size="small">
               <Descriptions.Item label="Email">{selectedUser.email}</Descriptions.Item>
               <Descriptions.Item label="Телефон">{selectedUser.phone || '—'}</Descriptions.Item>
-              {selectedUser.unique_code && (
-                <Descriptions.Item label="Уникальный код">
-                  <Tag color="blue">{selectedUser.unique_code}</Tag>
-                </Descriptions.Item>
-              )}
               <Descriptions.Item label="Бонусы">
                 {selectedUser.loyalty_bonuses !== null && selectedUser.loyalty_bonuses !== undefined
                   ? `${selectedUser.loyalty_bonuses} бонусов`
@@ -441,14 +343,6 @@ const UsersPage = () => {
             <Space direction="vertical" style={{ marginTop: 16, width: '100%' }}>
               <Button type="primary" onClick={() => setAdjustModalOpen(true)} block>
                 Скорректировать баллы лояльности
-              </Button>
-              <Button 
-                type="default" 
-                onClick={() => setCodeSearchModalOpen(true)} 
-                block
-                style={{ borderColor: '#1890ff', color: '#1890ff' }}
-              >
-                Начислить бонусы по коду из профиля
               </Button>
             </Space>
 
@@ -511,6 +405,7 @@ const UsersPage = () => {
               const payload = {
                 bonuses_delta: values.bonuses_delta,
                 reason: values.reason || null,
+                expires_in_days: values.expires_in_days || null,
               };
               const result = await adjustUserLoyalty(selectedUser.id, payload);
               message.success('Бонусы обновлены');
@@ -539,155 +434,22 @@ const UsersPage = () => {
             />
           </Form.Item>
           <Form.Item
+            label="Срок действия временных бонусов (дней, необязательно)"
+            name="expires_in_days"
+            extra="Оставьте пустым, если начисление должно быть бессрочным."
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              min={1}
+              placeholder="Например, 30"
+            />
+          </Form.Item>
+          <Form.Item
             label="Комментарий (необязательно)"
             name="reason"
           >
             <Input.TextArea rows={3} placeholder="Причина корректировки, видно только в аудите" />
           </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Модальное окно для поиска по коду и начисления бонусов */}
-      <Modal
-        title="Начислить бонусы по коду пользователя"
-        open={codeSearchModalOpen}
-        onCancel={() => {
-          setCodeSearchModalOpen(false);
-          codeSearchForm.resetFields();
-          setCodeSearchResult(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={codeSearchForm}
-          layout="vertical"
-          onFinish={codeSearchResult ? handleAwardBonusesByCode : handleCodeSearch}
-        >
-          {!codeSearchResult ? (
-            <>
-              <Form.Item
-                name="code"
-                label="Уникальный код пользователя"
-                rules={[{ required: true, message: 'Введите код из профиля пользователя' }]}
-                extra="Код можно найти в профиле пользователя в приложении"
-              >
-                <Input
-                  placeholder="Например: ABC12345"
-                  style={{ textTransform: 'uppercase' }}
-                  onInput={(e) => {
-                    e.target.value = e.target.value.toUpperCase();
-                  }}
-                  size="large"
-                />
-              </Form.Item>
-              <Form.Item>
-                <Button type="primary" htmlType="submit" loading={codeSearchLoading} block size="large">
-                  Найти пользователя
-                </Button>
-              </Form.Item>
-            </>
-          ) : (
-            <>
-              <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
-                <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Имя">
-                    {codeSearchResult.name} {codeSearchResult.surname || ''}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Email">{codeSearchResult.email}</Descriptions.Item>
-                  <Descriptions.Item label="Код">
-                    <Tag color="blue">{codeSearchResult.unique_code}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Текущие бонусы">
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
-                      {codeSearchResult.loyalty_bonuses || 0} бонусов
-                    </span>
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-              <Form.List name="services">
-                {(fields, { add, remove }) => (
-                  <>
-                    {fields.map((field, index) => (
-                      <Space
-                        key={field.key}
-                        align="baseline"
-                        style={{ width: '100%', marginBottom: 8 }}
-                      >
-                        <Form.Item
-                          {...field}
-                          label={index === 0 ? 'Услуга' : ''}
-                          name={[field.name, 'service_name']}
-                          fieldKey={[field.fieldKey, 'service_name']}
-                          rules={[{ required: true, message: 'Введите название услуги' }]}
-                          style={{ flex: 1 }}
-                        >
-                          <Input placeholder="Например, Массаж спины" />
-                        </Form.Item>
-                        <Form.Item
-                          {...field}
-                          label={index === 0 ? 'Стоимость, ₽' : ''}
-                          name={[field.name, 'price_rub']}
-                          fieldKey={[field.fieldKey, 'price_rub']}
-                          rules={[{ required: true, message: 'Укажите стоимость' }]}
-                        >
-                          <InputNumber
-                            min={1}
-                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
-                            parser={(value) => value.replace(/\s/g, '')}
-                            style={{ width: 140 }}
-                          />
-                        </Form.Item>
-                        <Button
-                          type="text"
-                          danger
-                          icon={<MinusCircleOutlined />}
-                          onClick={() => remove(field.name)}
-                        />
-                      </Space>
-                    ))}
-                    <Button
-                      type="dashed"
-                      onClick={() => add()}
-                      block
-                      icon={<PlusOutlined />}
-                      style={{ marginBottom: 8 }}
-                    >
-                      Добавить услугу для начисления бонусов
-                    </Button>
-                    {fields.length > 0 && (
-                      <Typography.Text type="secondary">
-                        Бонусы начисляются автоматически по проценту уровня пользователя ({cashbackPercent}%).
-                      </Typography.Text>
-                    )}
-                  </>
-                )}
-              </Form.List>
-              {servicesTotal > 0 && (
-                <Typography.Text strong style={{ display: 'block', marginTop: 8, fontSize: '16px', color: '#1890ff' }}>
-                  Итого будет начислено: {bonusesToAward.toLocaleString('ru-RU')} бонусов ({cashbackPercent}% от {servicesTotal.toLocaleString('ru-RU')} ₽)
-                </Typography.Text>
-              )}
-              <Form.Item name="reason" label="Причина (опционально)">
-                <Input.TextArea rows={3} placeholder="Например: Скидка на услугу массажа" />
-              </Form.Item>
-              <Form.Item>
-                <Space>
-                  <Button
-                    onClick={() => {
-                      setCodeSearchResult(null);
-                      codeSearchForm.resetFields(['reason', 'services']);
-                    }}
-                  >
-                    Найти другого пользователя
-                  </Button>
-                  <Button type="primary" htmlType="submit" loading={adjustLoading} block>
-                    Начислить бонусы
-                  </Button>
-                </Space>
-              </Form.Item>
-            </>
-          )}
         </Form>
       </Modal>
     </Card>

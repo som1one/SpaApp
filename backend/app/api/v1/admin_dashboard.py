@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.apis.dependencies import admin_required
 from app.core.database import get_db
 from app.models.booking import Booking, BookingStatus
+from app.models.loyalty import LoyaltyLevel
 from app.models.user import User
 from app.schemas.admin_dashboard import (
     DashboardSummaryResponse,
@@ -15,6 +16,8 @@ from app.schemas.admin_dashboard import (
     AdminBookingResponse,
     StatusCount,
     MonthlyBookings,
+    MonthlyUsers,
+    LoyaltyLevelCount,
 )
 from app.utils.timezone import moscow_now
 
@@ -53,16 +56,28 @@ async def dashboard_summary(
 
         # Отдельный быстрый запрос для пользователей
         total_users = db.query(func.count(User.id)).scalar() or 0
+        active_users = db.query(func.count(User.id)).filter(User.is_active == True).scalar() or 0
+        verified_users = db.query(func.count(User.id)).filter(User.is_verified == True).scalar() or 0
+        users_with_bonuses = db.query(func.count(User.id)).filter(User.loyalty_bonuses > 0).scalar() or 0
+        users_with_levels = db.query(func.count(User.id)).filter(User.loyalty_level_id.isnot(None)).scalar() or 0
+        total_bonus_balance = db.query(func.coalesce(func.sum(User.loyalty_bonuses), 0)).scalar() or 0
         logger.debug(f"Total users: {total_users}")
-        
+
         # Месячная статистика
         logger.debug("Getting monthly bookings")
         monthly_breakdown = _get_monthly_bookings(db)
+        monthly_users = _get_monthly_users(db)
+        loyalty_level_breakdown = _get_loyalty_level_breakdown(db)
         logger.debug(f"Monthly breakdown: {monthly_breakdown}")
 
         logger.info(f"Admin summary generated: {total_users} users, {total_bookings} bookings")
         return DashboardSummaryResponse(
             total_users=total_users,
+            active_users=active_users,
+            verified_users=verified_users,
+            users_with_bonuses=users_with_bonuses,
+            users_with_levels=users_with_levels,
+            total_bonus_balance=total_bonus_balance,
             total_bookings=total_bookings,
             confirmed_bookings=confirmed,
             pending_bookings=pending,
@@ -70,12 +85,19 @@ async def dashboard_summary(
             cancelled_bookings=cancelled,
             status_breakdown=status_breakdown,
             monthly_bookings=monthly_breakdown,
+            monthly_users=monthly_users,
+            loyalty_level_breakdown=loyalty_level_breakdown,
         )
     except Exception as e:
         logger.error(f"Error generating dashboard summary: {e}", exc_info=True)
         # Возвращаем пустые данные вместо ошибки, чтобы фронтенд не падал
         return DashboardSummaryResponse(
             total_users=0,
+            active_users=0,
+            verified_users=0,
+            users_with_bonuses=0,
+            users_with_levels=0,
+            total_bonus_balance=0,
             total_bookings=0,
             confirmed_bookings=0,
             pending_bookings=0,
@@ -83,6 +105,8 @@ async def dashboard_summary(
             cancelled_bookings=0,
             status_breakdown=[],
             monthly_bookings=[],
+            monthly_users=[],
+            loyalty_level_breakdown=[],
         )
 
 
@@ -165,7 +189,7 @@ def _get_monthly_bookings(db: Session) -> list[MonthlyBookings]:
         table_name = Booking.__tablename__
         # Используем format для подстановки имени таблицы (безопасно, так как это константа из модели)
         sql_query = text("""
-            SELECT 
+            SELECT
                 DATE_TRUNC('month', appointment_datetime)::date as month,
                 COUNT(*) as count
             FROM {} 
@@ -200,3 +224,65 @@ def _get_monthly_bookings(db: Session) -> list[MonthlyBookings]:
         return []
 
 
+def _get_monthly_users(db: Session) -> list[MonthlyUsers]:
+    try:
+        now = moscow_now()
+        start = _subtract_months(_month_floor(now), 5)
+
+        sql_query = text("""
+            SELECT
+                DATE_TRUNC('month', created_at)::date as month,
+                COUNT(*) as count
+            FROM users
+            WHERE created_at >= :start_date
+            GROUP BY DATE_TRUNC('month', created_at)
+            ORDER BY month
+        """)
+
+        result = db.execute(sql_query, {"start_date": start})
+        rows = result.fetchall()
+
+        counts_map = {}
+        for row in rows:
+            month_date = row[0]
+            count = row[1]
+            if month_date:
+                counts_map[month_date.strftime("%Y-%m")] = count
+
+        months = []
+        for i in range(5, -1, -1):
+            current = _subtract_months(_month_floor(now), i)
+            key = current.strftime("%Y-%m")
+            months.append(MonthlyUsers(month=key, count=counts_map.get(key, 0)))
+
+        return months
+    except Exception as e:
+        logger.error(f"Error in _get_monthly_users: {e}", exc_info=True)
+        return []
+
+
+def _get_loyalty_level_breakdown(db: Session) -> list[LoyaltyLevelCount]:
+    try:
+        level_names = {
+            level.id: level.name
+            for level in db.query(LoyaltyLevel.id, LoyaltyLevel.name).all()
+        }
+        rows = (
+            db.query(User.loyalty_level_id, func.count(User.id))
+            .group_by(User.loyalty_level_id)
+            .all()
+        )
+
+        items: list[LoyaltyLevelCount] = []
+        for level_id, count in rows:
+            if level_id is None:
+                label = "Без уровня"
+            else:
+                level_name = level_names.get(level_id, str(level_id))
+                label = f"Уровень {level_name}"
+            items.append(LoyaltyLevelCount(level=label, count=count))
+
+        return items
+    except Exception as e:
+        logger.error(f"Error in _get_loyalty_level_breakdown: {e}", exc_info=True)
+        return []

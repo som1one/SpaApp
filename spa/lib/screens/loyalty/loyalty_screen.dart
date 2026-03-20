@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../services/loyalty_service.dart';
-import '../../services/user_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/loyalty.dart';
 import '../../routes/route_names.dart';
@@ -20,7 +18,6 @@ class LoyaltyScreen extends StatefulWidget {
 class _LoyaltyScreenState extends State<LoyaltyScreen> {
   LoyaltyInfo? _loyaltyInfo;
   bool _isLoading = true;
-  bool _useLoyaltyPoints = false;
   String? _error;
   final NumberFormat _rubFormatter = NumberFormat.decimalPattern('ru');
   final _authService = AuthService();
@@ -29,18 +26,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   void initState() {
     super.initState();
     _loadLoyaltyInfo();
-    _loadUserSettings();
-  }
-
-  Future<void> _loadUserSettings() async {
-    try {
-      final user = await UserService().getCurrentUser();
-      setState(() {
-        _useLoyaltyPoints = user?.autoApplyLoyaltyPoints ?? false;
-      });
-    } catch (e) {
-      // Игнорируем ошибки загрузки настроек
-    }
   }
 
   Future<void> _loadLoyaltyInfo() async {
@@ -112,15 +97,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
-    }
-  }
-
-  Color _parseColor(String hex) {
-    try {
-      return Color(
-          int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
-    } catch (e) {
-      return AppColors.buttonPrimary;
     }
   }
 
@@ -263,9 +239,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                                 _buildProgressSection(_loyaltyInfo!),
                                 const SizedBox(height: 32),
                               ],
-
-                              // Использовать баллы автоматически
-                              _buildUsePointsCard(),
                               const SizedBox(height: 100),
                             ],
                           ),
@@ -294,7 +267,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
         onPressed: () => Navigator.of(context).pop(),
       ),
       title: Text(
-        'Мои бонусы',
+        'Лояльность',
         style: AppTextStyles.heading3.copyWith(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.bold,
@@ -323,7 +296,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
               ],
             ),
             child: Icon(
-              Icons.card_giftcard,
+              Icons.eco,
               color: AppColors.buttonPrimary,
               size: 30,
             ),
@@ -338,7 +311,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Бонусами можно оплачивать любые\nпроцедуры в PRIRODA SPA',
+            'Кэшбэк начисляется процентом\nпосле завершённого визита в YClients',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
@@ -346,7 +319,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '1 бонус = 1 рубль',
+            'Уровень определяется по общей сумме завершённых визитов',
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
@@ -708,137 +681,6 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
         color: AppColors.textPrimary,
         fontWeight: FontWeight.bold,
         fontSize: 18,
-      ),
-    );
-  }
-
-  Widget _buildBonusCard({
-    required LoyaltyBonus bonus,
-    required Color levelColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: levelColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              _parseIcon(bonus.icon),
-              color: levelColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  bonus.title,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  bonus.description,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUsePointsCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Использовать баллы',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Автоматически применять баллы лояльности при бронировании',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Switch(
-            value: _useLoyaltyPoints,
-            onChanged: (value) async {
-              HapticFeedback.lightImpact();
-              setState(() {
-                _useLoyaltyPoints = value;
-              });
-              try {
-                await LoyaltyService().updateAutoApply(value);
-                // Обновляем кеш пользователя
-                await UserService().refreshUser();
-              } catch (e) {
-                // Откатываем изменение при ошибке
-                setState(() {
-                  _useLoyaltyPoints = !value;
-                });
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Не удалось сохранить настройку: ${e.toString()}'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            activeColor: AppColors.buttonPrimary,
-          ),
-        ],
       ),
     );
   }

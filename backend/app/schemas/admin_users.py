@@ -15,7 +15,6 @@ class AdminUserResponse(BaseModel):
     loyalty_level: Optional[int] = Field(None, alias="loyalty_level_id")
     loyalty_bonuses: Optional[int] = None
     spent_bonuses: Optional[int] = None
-    unique_code: Optional[str] = None
     auto_apply_loyalty_points: bool = False
     created_at: datetime
     cashback_percent: Optional[int] = None  # Процент кэшбэка текущего уровня (для расчета начисления)
@@ -28,4 +27,3 @@ class AdminUserResponse(BaseModel):
 class AdminUsersListResponse(BaseModel):
     items: List[AdminUserResponse]
     total: int
-

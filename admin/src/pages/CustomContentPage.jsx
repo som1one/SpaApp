@@ -23,7 +23,7 @@ import {
 } from '../api/customContent';
 
 const blockTypeOptions = [
-  { value: 'spa_travel', label: 'Популярные SPA (карусель)' },
+  { value: 'spa_travel', label: 'Спа-терапия (карусель на главной)' },
   { value: 'promotion', label: 'Акция' },
   { value: 'banner', label: 'Баннер' },
   { value: 'custom', label: 'Кастомный' },
@@ -37,6 +37,7 @@ const CustomContentPage = () => {
   const [modalInitial, setModalInitial] = useState(null);
   const [form] = Form.useForm();
   const isSuperAdmin = user?.role === 'super_admin';
+  const selectedBlockType = Form.useWatch('block_type', form);
 
   const loadBlocks = useCallback(async () => {
     try {
@@ -185,8 +186,39 @@ const CustomContentPage = () => {
     );
   }
 
+  const spaTherapyBlocks = blocks.filter((block) => block.block_type === 'spa_travel');
+  const otherBlocks = blocks.filter((block) => block.block_type !== 'spa_travel');
+
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Card
+        title="Спа-терапия на главной"
+        extra={(
+          <Button
+            type="primary"
+            onClick={() => {
+              handleOpenModal(null);
+              form.setFieldValue('block_type', 'spa_travel');
+            }}
+          >
+            Новая карточка
+          </Button>
+        )}
+      >
+        <Typography.Paragraph type="secondary">
+          Здесь настраивается именно карусель с ездящими карточками на главной странице приложения.
+          Для каждой карточки можно менять текст, ссылку, фото и порядок.
+        </Typography.Paragraph>
+        <Table
+          rowKey="id"
+          loading={loading}
+          dataSource={spaTherapyBlocks}
+          columns={columns}
+          pagination={false}
+          locale={{ emptyText: 'Карточки для блока «Спа-терапия» ещё не созданы' }}
+        />
+      </Card>
+
       <Card
         title="Кастомные блоки контента"
         extra={(
@@ -196,13 +228,12 @@ const CustomContentPage = () => {
         )}
       >
         <Typography.Paragraph type="secondary">
-          Управление кастомными блоками контента, которые отображаются на главном экране приложения.
-          Можно создавать блоки с изображениями, текстом, ссылками и настраивать их внешний вид.
+          Остальные блоки контента для главного экрана приложения. Спа-терапия вынесена в отдельный блок выше.
         </Typography.Paragraph>
         <Table
           rowKey="id"
           loading={loading}
-          dataSource={blocks}
+          dataSource={otherBlocks}
           columns={columns}
           pagination={false}
         />
@@ -227,42 +258,46 @@ const CustomContentPage = () => {
           onFinish={handleSubmit}
         >
           <Form.Item
-            label="Заголовок"
+            label={selectedBlockType === 'spa_travel' ? 'Текст карточки' : 'Заголовок'}
             name="title"
             rules={[{ required: true, message: 'Введите заголовок' }]}
           >
-            <Input placeholder="Например, Spa-путешествия" />
+            <Input placeholder={selectedBlockType === 'spa_travel' ? 'Например, Head Spa Ritual' : 'Например, Spa-путешествия'} />
           </Form.Item>
           <Form.Item
-            label="Подзаголовок"
+            label={selectedBlockType === 'spa_travel' ? 'Подпись' : 'Подзаголовок'}
             name="subtitle"
           >
-            <Input placeholder="Краткое описание" />
+            <Input placeholder={selectedBlockType === 'spa_travel' ? 'Короткая подпись под карточкой' : 'Краткое описание'} />
           </Form.Item>
+          {selectedBlockType !== 'spa_travel' && (
+            <Form.Item
+              label="Описание"
+              name="description"
+            >
+              <Input.TextArea rows={4} placeholder="Подробное описание (может быть HTML)" />
+            </Form.Item>
+          )}
           <Form.Item
-            label="Описание"
-            name="description"
-          >
-            <Input.TextArea rows={4} placeholder="Подробное описание (может быть HTML)" />
-          </Form.Item>
-          <Form.Item
-            label="URL изображения"
+            label={selectedBlockType === 'spa_travel' ? 'Фото карточки (URL)' : 'URL изображения'}
             name="image_url"
           >
             <Input placeholder="https://example.com/image.jpg" />
           </Form.Item>
           <Form.Item
-            label="URL действия (ссылка)"
+            label={selectedBlockType === 'spa_travel' ? 'Ссылка по нажатию' : 'URL действия (ссылка)'}
             name="action_url"
           >
             <Input placeholder="https://example.com" />
           </Form.Item>
-          <Form.Item
-            label="Текст кнопки действия"
-            name="action_text"
-          >
-            <Input placeholder="Например, Подробнее" />
-          </Form.Item>
+          {selectedBlockType !== 'spa_travel' && (
+            <Form.Item
+              label="Текст кнопки действия"
+              name="action_text"
+            >
+              <Input placeholder="Например, Подробнее" />
+            </Form.Item>
+          )}
           <Form.Item
             label="Тип блока"
             name="block_type"

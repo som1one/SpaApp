@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/staff.dart';
 import '../models/time_slot.dart';
 import '../services/api_service.dart';
@@ -18,11 +16,13 @@ class BookingService {
     }
 
     final response = await _apiService.get('/booking/staff/$serviceId');
-    
+
     if (response is List) {
-      return response.map((json) => StaffMember.fromJson(json as Map<String, dynamic>)).toList();
+      return response
+          .map((json) => StaffMember.fromJson(json as Map<String, dynamic>))
+          .toList();
     }
-    
+
     return [];
   }
 
@@ -37,13 +37,14 @@ class BookingService {
       _apiService.token = token;
     }
 
-    final url = '/booking/available-days/$serviceId?staff_id=$staffId&days_ahead=$daysAhead';
+    final url =
+        '/booking/available-days/$serviceId?staff_id=$staffId&days_ahead=$daysAhead';
     final response = await _apiService.get(url);
-    
+
     if (response is List) {
       return response.map((date) => date.toString()).toList();
     }
-    
+
     return [];
   }
 
@@ -65,11 +66,13 @@ class BookingService {
     }
 
     final response = await _apiService.get(url);
-    
+
     if (response is List) {
-      return response.map((json) => TimeSlot.fromJson(json as Map<String, dynamic>)).toList();
+      return response
+          .map((json) => TimeSlot.fromJson(json as Map<String, dynamic>))
+          .toList();
     }
-    
+
     return [];
   }
 
@@ -78,8 +81,6 @@ class BookingService {
     required int serviceId,
     required int staffId,
     required String datetimeStr,
-    bool useBonuses = false,
-    int bonusesAmount = 0,
     String? comment,
   }) async {
     final token = _authService.token;
@@ -91,14 +92,12 @@ class BookingService {
       'service_id': serviceId,
       'staff_id': staffId,
       'datetime_str': datetimeStr,
-      'use_bonuses': useBonuses,
-      'bonuses_amount': bonusesAmount,
       if (comment != null) 'comment': comment,
     };
 
     // ApiService.post принимает позиционный параметр data
     final response = await _apiService.post('/booking/create', body);
-    
+
     return response;
   }
 
@@ -120,4 +119,3 @@ class BookingService {
     await _apiService.put('/bookings/$bookingId', body);
   }
 }
-

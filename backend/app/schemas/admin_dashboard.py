@@ -16,8 +16,23 @@ class MonthlyBookings(BaseModel):
     count: int
 
 
+class MonthlyUsers(BaseModel):
+    month: str
+    count: int
+
+
+class LoyaltyLevelCount(BaseModel):
+    level: str
+    count: int
+
+
 class DashboardSummaryResponse(BaseModel):
     total_users: int
+    active_users: int = 0
+    verified_users: int = 0
+    users_with_bonuses: int = 0
+    users_with_levels: int = 0
+    total_bonus_balance: int = 0
     total_bookings: int
     confirmed_bookings: int
     pending_bookings: int
@@ -25,6 +40,8 @@ class DashboardSummaryResponse(BaseModel):
     cancelled_bookings: int = 0
     status_breakdown: List[StatusCount]
     monthly_bookings: List[MonthlyBookings]
+    monthly_users: List[MonthlyUsers] = []
+    loyalty_level_breakdown: List[LoyaltyLevelCount] = []
 
 
 class AdminBookingResponse(BaseModel):
@@ -55,4 +72,3 @@ class BookingUpdateRequest(BaseModel):
 
 class BookingPaymentConfirmationRequest(BaseModel):
     amount_rub: float = Field(..., gt=0)
-

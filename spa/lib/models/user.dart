@@ -10,7 +10,6 @@ class User {
   final int? loyaltyBonuses;
   final int? spentBonuses;
   final bool autoApplyLoyaltyPoints;
-  final String? uniqueCode;
 
   User({
     required this.id,
@@ -24,7 +23,6 @@ class User {
     this.loyaltyBonuses,
     this.spentBonuses,
     this.autoApplyLoyaltyPoints = false,
-    this.uniqueCode,
   });
 
   String get fullName {
@@ -58,8 +56,8 @@ class User {
           : json['spent_bonuses'] != null
               ? int.tryParse(json['spent_bonuses'].toString())
               : null,
-      autoApplyLoyaltyPoints: json['auto_apply_loyalty_points'] as bool? ?? false,
-      uniqueCode: json['unique_code'] as String?,
+      autoApplyLoyaltyPoints:
+          json['auto_apply_loyalty_points'] as bool? ?? false,
     );
   }
 
@@ -76,7 +74,6 @@ class User {
       'loyalty_bonuses': loyaltyBonuses,
       'spent_bonuses': spentBonuses,
       'auto_apply_loyalty_points': autoApplyLoyaltyPoints,
-      'unique_code': uniqueCode,
     };
   }
 
@@ -92,7 +89,6 @@ class User {
     int? loyaltyBonuses,
     int? spentBonuses,
     bool? autoApplyLoyaltyPoints,
-    String? uniqueCode,
   }) {
     return User(
       id: id ?? this.id,
@@ -105,9 +101,8 @@ class User {
       loyaltyLevel: loyaltyLevel ?? this.loyaltyLevel,
       loyaltyBonuses: loyaltyBonuses ?? this.loyaltyBonuses,
       spentBonuses: spentBonuses ?? this.spentBonuses,
-      autoApplyLoyaltyPoints: autoApplyLoyaltyPoints ?? this.autoApplyLoyaltyPoints,
-      uniqueCode: uniqueCode ?? this.uniqueCode,
+      autoApplyLoyaltyPoints:
+          autoApplyLoyaltyPoints ?? this.autoApplyLoyaltyPoints,
     );
   }
 }
-

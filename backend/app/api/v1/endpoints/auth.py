@@ -370,7 +370,6 @@ async def get_current_user_info(
         "loyalty_bonuses": user.loyalty_bonuses,
         "spent_bonuses": user.spent_bonuses,
         "auto_apply_loyalty_points": user.auto_apply_loyalty_points,
-        "unique_code": user.unique_code,
         "is_authenticated": True,
     }
 
@@ -436,5 +435,4 @@ async def update_user_profile(
         "loyalty_bonuses": user.loyalty_bonuses,
         "spent_bonuses": user.spent_bonuses,
         "auto_apply_loyalty_points": user.auto_apply_loyalty_points,
-        "unique_code": user.unique_code,
     }

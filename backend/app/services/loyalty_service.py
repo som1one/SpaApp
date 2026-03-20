@@ -21,6 +21,7 @@ TRANSACTION_STATUS_EXPIRED = "expired"
 TRANSACTION_TYPE_WELCOME = "welcome_bonus"
 TRANSACTION_TYPE_BOOKING = "booking_cashback"
 TRANSACTION_TYPE_MANUAL = "manual_award"
+TRANSACTION_TYPE_TEMPORARY = "temporary_award"
 TRANSACTION_TYPE_BULK = "bulk_award"
 TRANSACTION_TYPE_EXPIRE = "expire"
 
@@ -130,22 +131,38 @@ def _get_user_total_spent_cents(db: Session, user: User) -> int:
     return sum((row[0] or 0) for row in total)
 
 
+def get_user_total_spent_cents(db: Session, user: User) -> int:
+    """Публичная обёртка для расчёта фактических трат пользователя."""
+    return _get_user_total_spent_cents(db, user)
+
+
 def _get_user_loyalty_level(db: Session, user: User) -> Optional[LoyaltyLevel]:
     """Получить текущий уровень лояльности пользователя на основе его трат в рублях."""
     total_spent_cents = _get_user_total_spent_cents(db, user)
     total_spent_rub = total_spent_cents // 100
 
     if total_spent_rub <= 0:
-        return db.query(LoyaltyLevel).filter(LoyaltyLevel.min_bonuses == 0).first()
+        return (
+            db.query(LoyaltyLevel)
+            .filter(LoyaltyLevel.is_active == True)
+            .filter(LoyaltyLevel.min_bonuses == 0)
+            .order_by(LoyaltyLevel.order_index.asc(), LoyaltyLevel.min_bonuses.asc())
+            .first()
+        )
 
     level = (
         db.query(LoyaltyLevel)
         .filter(LoyaltyLevel.min_bonuses <= total_spent_rub)
         .filter(LoyaltyLevel.is_active == True)
-        .order_by(LoyaltyLevel.min_bonuses.desc())
+        .order_by(LoyaltyLevel.min_bonuses.desc(), LoyaltyLevel.order_index.desc())
         .first()
     )
     return level
+
+
+def get_user_loyalty_level(db: Session, user: User) -> Optional[LoyaltyLevel]:
+    """Публичная обёртка для получения уровня лояльности пользователя."""
+    return _get_user_loyalty_level(db, user)
 
 
 def refresh_user_loyalty_level(db: Session, user: User) -> Optional[LoyaltyLevel]:
@@ -250,7 +267,7 @@ def add_loyalty_transaction(
         raise ValueError("Недостаточно бонусов для списания")
 
     expires_at = None
-    if amount > 0 and expires_in_days:
+    if amount > 0 and expires_in_days and expires_in_days > 0:
         expires_at = _utcnow() + timedelta(days=expires_in_days)
 
     transaction = LoyaltyTransaction(

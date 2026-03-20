@@ -6,7 +6,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Select,
   Space,
   Switch,
   Table,
@@ -17,25 +16,15 @@ import {
 import { useAuth } from '../context/useAuth';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  createLoyaltyBonus,
   createLoyaltyLevel,
-  deleteLoyaltyBonus,
   deleteLoyaltyLevel,
-  fetchLoyaltyBonuses,
   fetchLoyaltyLevels,
-  updateLoyaltyBonus,
   updateLoyaltyLevel,
   fetchLoyaltySettings,
   updateLoyaltySettings,
   bulkAwardLoyalty,
+  recalculateLoyaltyLevels,
 } from '../api/loyalty';
-
-const iconOptions = [
-  { value: 'eco', label: 'Лист (eco)' },
-  { value: 'card_giftcard', label: 'Подарок (card_giftcard)' },
-  { value: 'local_offer', label: 'Тег (local_offer)' },
-  { value: 'star_outline', label: 'Звезда (star_outline)' },
-];
 
 const LoyaltyPage = () => {
   const { user } = useAuth();
@@ -44,17 +33,12 @@ const LoyaltyPage = () => {
   const [levelsModalOpen, setLevelsModalOpen] = useState(false);
   const [levelsModalInitial, setLevelsModalInitial] = useState(null);
 
-  const [bonuses, setBonuses] = useState([]);
-  const [bonusesLoading, setBonusesLoading] = useState(true);
-  const [bonusModalOpen, setBonusModalOpen] = useState(false);
-  const [bonusModalInitial, setBonusModalInitial] = useState(null);
-
   const [settings, setSettings] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [recalculateLoading, setRecalculateLoading] = useState(false);
 
   const [formLevel] = Form.useForm();
-  const [formBonus] = Form.useForm();
   const [formSettings] = Form.useForm();
   const [formBulk] = Form.useForm();
   const isSuperAdmin = user?.role === 'super_admin';
@@ -68,18 +52,6 @@ const LoyaltyPage = () => {
       message.error('Не удалось загрузить уровни лояльности');
     } finally {
       setLevelsLoading(false);
-    }
-  }, []);
-
-  const loadBonuses = useCallback(async () => {
-    try {
-      setBonusesLoading(true);
-      const data = await fetchLoyaltyBonuses();
-      setBonuses(data);
-    } catch {
-      message.error('Не удалось загрузить бонусы лояльности');
-    } finally {
-      setBonusesLoading(false);
     }
   }, []);
 
@@ -98,14 +70,12 @@ const LoyaltyPage = () => {
   useEffect(() => {
     if (!isSuperAdmin) {
       setLevelsLoading(false);
-      setBonusesLoading(false);
       setSettingsLoading(false);
       return;
     }
     loadLevels();
-    loadBonuses();
     loadSettings();
-  }, [isSuperAdmin, loadBonuses, loadLevels, loadSettings]);
+  }, [isSuperAdmin, loadLevels, loadSettings]);
 
   const handleOpenLevelModal = useCallback((record) => {
     setLevelsModalInitial(record || null);
@@ -123,12 +93,7 @@ const LoyaltyPage = () => {
       });
     } else {
       formLevel.resetFields();
-      formLevel.setFieldsValue({
-        icon: 'eco',
-        order_index: 0,
-        cashback_percent: 3,
-        is_active: true,
-      });
+      formLevel.setFieldsValue({ order_index: 0, cashback_percent: 3, is_active: true });
     }
   }, [formLevel]);
 
@@ -176,7 +141,7 @@ const LoyaltyPage = () => {
         dataIndex: 'name',
       },
       {
-        title: 'Мин. бонусов',
+        title: 'Порог трат, ₽',
         dataIndex: 'min_bonuses',
       },
       {
@@ -229,125 +194,9 @@ const LoyaltyPage = () => {
     [handleDeleteLevel, handleOpenLevelModal],
   );
 
-  const handleOpenBonusModal = useCallback((record) => {
-    setBonusModalInitial(record || null);
-    setBonusModalOpen(true);
-    if (record) {
-      formBonus.setFieldsValue({
-        title: record.title,
-        description: record.description,
-        icon: record.icon,
-        min_level_id: record.min_level_id,
-        order_index: record.order_index,
-      });
-    } else {
-      formBonus.resetFields();
-      formBonus.setFieldsValue({
-        icon: 'card_giftcard',
-        order_index: 0,
-      });
-    }
-  }, [formBonus]);
-
-  const handleSubmitBonus = async (values) => {
-    try {
-      if (bonusModalInitial) {
-        await updateLoyaltyBonus(bonusModalInitial.id, values);
-        message.success('Бонус обновлён');
-      } else {
-        await createLoyaltyBonus(values);
-        message.success('Бонус создан');
-      }
-      setBonusModalOpen(false);
-      setBonusModalInitial(null);
-      formBonus.resetFields();
-      loadBonuses();
-    } catch (error) {
-      message.error(error?.response?.data?.detail ?? 'Не удалось сохранить бонус');
-    }
-  };
-
-  const handleDeleteBonus = useCallback((record) => {
-    Modal.confirm({
-      title: 'Удалить бонус?',
-      content: `Бонус "${record.title}" будет удалён и перестанет отображаться пользователям.`,
-      okButtonProps: { danger: true },
-      okText: 'Удалить',
-      cancelText: 'Отмена',
-      onOk: async () => {
-        try {
-          await deleteLoyaltyBonus(record.id);
-          message.success('Бонус удалён');
-          loadBonuses();
-        } catch (error) {
-          message.error(error?.response?.data?.detail ?? 'Не удалось удалить бонус');
-        }
-      },
-    });
-  }, [loadBonuses]);
-
-  const levelOptions = useMemo(
-    () =>
-      levels.map((level) => ({
-        value: level.id,
-        label: `${level.name} (от ${level.min_bonuses} бонусов)`,
-      })),
-    [levels],
-  );
-
-  const bonusColumns = useMemo(
-    () => [
-      {
-        title: 'Название',
-        dataIndex: 'title',
-      },
-      {
-        title: 'Описание',
-        dataIndex: 'description',
-      },
-      {
-        title: 'Иконка',
-        dataIndex: 'icon',
-      },
-      {
-        title: 'Мин. уровень',
-        dataIndex: 'min_level_id',
-        render: (value) => {
-          if (!value) return 'Все уровни';
-          const level = levels.find((l) => l.id === value);
-          return level ? level.name : value;
-        },
-      },
-      {
-        title: 'Порядок',
-        dataIndex: 'order_index',
-      },
-      {
-        title: 'Действия',
-        render: (_, record) => (
-          <Space>
-            <Button size="small" type="link" onClick={() => handleOpenBonusModal(record)}>
-              Редактировать
-            </Button>
-            <Button
-              size="small"
-              type="link"
-              danger
-              onClick={() => handleDeleteBonus(record)}
-            >
-              Удалить
-            </Button>
-          </Space>
-        ),
-      },
-    ],
-    [handleDeleteBonus, handleOpenBonusModal, levels],
-  );
-
   const handleOpenSettingsModal = useCallback(() => {
     if (settings) {
       formSettings.setFieldsValue({
-        points_per_100_rub: settings.points_per_100_rub,
         loyalty_enabled: settings.loyalty_enabled,
         welcome_bonus_amount: settings.welcome_bonus_amount,
         bonus_expiry_days: settings.bonus_expiry_days,
@@ -371,10 +220,29 @@ const LoyaltyPage = () => {
   const handleBulkAward = async (values) => {
     try {
       const result = await bulkAwardLoyalty(values);
-      message.success(`Начисление выполнено: ${result.processed_users} пользователей`);
+      message.success(
+        `Начисление выполнено: ${result.processed_users} пользователей${
+          values.expires_in_days ? `, срок ${values.expires_in_days} дн.` : ''
+        }`,
+      );
       formBulk.resetFields();
     } catch (error) {
       message.error(error?.response?.data?.detail ?? 'Не удалось начислить бонусы всем');
+    }
+  };
+
+  const handleRecalculateLevels = async () => {
+    try {
+      setRecalculateLoading(true);
+      const result = await recalculateLoyaltyLevels();
+      message.success(
+        `Уровни пересчитаны: обработано ${result.processed_users}, обновлено ${result.updated_users}`,
+      );
+      loadLevels();
+    } catch (error) {
+      message.error(error?.response?.data?.detail ?? 'Не удалось пересчитать уровни');
+    } finally {
+      setRecalculateLoading(false);
     }
   };
 
@@ -391,7 +259,7 @@ const LoyaltyPage = () => {
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Card
-        title="Настройки начисления баллов"
+        title="Настройки начисления бонусов"
         extra={(
           <Button onClick={handleOpenSettingsModal} disabled={settingsLoading}>
             Изменить
@@ -399,22 +267,20 @@ const LoyaltyPage = () => {
         )}
       >
         <Typography.Paragraph type="secondary">
-          Баллы начисляются автоматически после завершения записи (статус COMPLETED).
-          Ниже указано, сколько баллов пользователь получает за каждые 100 ₽ стоимости услуги.
+          Бонусы начисляются автоматически только после того, как заявка закрылась в YClients
+          и попала к нам со статусом `COMPLETED`. Размер начисления считается как процент
+          кэшбэка текущего уровня от суммы визита.
         </Typography.Paragraph>
         {settingsLoading ? (
           <Typography.Text>Загрузка...</Typography.Text>
         ) : settings ? (
           <Space direction="vertical" size={8}>
-            <Typography.Text strong>
-              Начисление:
-              {' '}
-              <Tag color="green">
-                {settings.points_per_100_rub}
-                {' '}
-                баллов за каждые 100 ₽
-              </Tag>
-            </Typography.Text>
+            <Alert
+              type="info"
+              showIcon
+              message="Фиксированная схема «5 бонусов за 100 ₽» больше не используется"
+              description="Теперь начисление идёт только по проценту кэшбэка уровня пользователя."
+            />
             <Typography.Text type="secondary">
               Программа лояльности:
               {' '}
@@ -452,8 +318,7 @@ const LoyaltyPage = () => {
       <Card title="Массовое начисление бонусов">
         <Typography.Paragraph type="secondary">
           Используйте этот блок, чтобы начислить одинаковое количество бонусов всем активным
-          пользователям приложения. Начисление попадёт в историю бонусов и будет действовать
-          стандартный срок жизни программы лояльности.
+          пользователям приложения. Если укажете срок — бонусы будут временными и автоматически сгорят.
         </Typography.Paragraph>
         <Form
           form={formBulk}
@@ -467,6 +332,13 @@ const LoyaltyPage = () => {
               { required: true, message: 'Укажите количество бонусов' },
               { type: 'number', min: 1, message: 'Значение должно быть больше 0' },
             ]}
+          >
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="Срок действия временных бонусов (дней, необязательно)"
+            name="expires_in_days"
+            extra="Оставьте пустым, если начисление должно быть бессрочным."
           >
             <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
@@ -492,41 +364,26 @@ const LoyaltyPage = () => {
       <Card
         title="Уровни лояльности"
         extra={(
-          <Button type="primary" onClick={() => handleOpenLevelModal(null)}>
-            Новый уровень
-          </Button>
+          <Space>
+            <Button onClick={handleRecalculateLevels} loading={recalculateLoading}>
+              Пересчитать уровни
+            </Button>
+            <Button type="primary" onClick={() => handleOpenLevelModal(null)}>
+              Новый уровень
+            </Button>
+          </Space>
         )}
       >
         <Typography.Paragraph type="secondary">
-          Здесь настраиваются пороги баллов и визуальный стиль уровней (цвета, иконки, порядок).
-          Эти уровни используются в мобильном приложении на экранах профиля и лояльности.
+          Здесь настраиваются пороги трат и процент кэшбэка для каждого уровня.
+          Если уровни уже были созданы раньше и не проставились пользователям, нажмите
+          `Пересчитать уровни`.
         </Typography.Paragraph>
         <Table
           rowKey="id"
           loading={levelsLoading}
           dataSource={levels}
           columns={levelColumns}
-          pagination={false}
-        />
-      </Card>
-
-      <Card
-        title="Бонусы и привилегии"
-        extra={(
-          <Button type="primary" onClick={() => handleOpenBonusModal(null)}>
-            Новый бонус
-          </Button>
-        )}
-      >
-        <Typography.Paragraph type="secondary">
-          Описание преимуществ для разных уровней. Эти карточки отображаются на экране
-          программы лояльности в приложении.
-        </Typography.Paragraph>
-        <Table
-          rowKey="id"
-          loading={bonusesLoading}
-          dataSource={bonuses}
-          columns={bonusColumns}
           pagination={false}
         />
       </Card>
@@ -553,12 +410,12 @@ const LoyaltyPage = () => {
             name="name"
             rules={[{ required: true, message: 'Введите название уровня' }]}
           >
-            <Input placeholder="Например, Silver, Gold, Platinum" />
+            <Input placeholder="Например, 0 / 1 / 2 / 3 / 4" />
           </Form.Item>
           <Form.Item
-            label="Минимум бонусов"
+            label="Минимальная сумма трат, ₽"
             name="min_bonuses"
-            rules={[{ required: true, message: 'Укажите минимальное количество бонусов' }]}
+            rules={[{ required: true, message: 'Укажите минимальную сумму трат' }]}
           >
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
@@ -587,7 +444,7 @@ const LoyaltyPage = () => {
             label="Иконка"
             name="icon"
           >
-            <Select options={iconOptions} />
+            <Input placeholder="Например, eco" />
           </Form.Item>
           <Form.Item
             label="Порядок отображения"
@@ -606,7 +463,7 @@ const LoyaltyPage = () => {
       </Modal>
 
       <Modal
-        title="Настройки начисления баллов"
+        title="Настройки начисления бонусов"
         open={settingsModalOpen}
         onCancel={() => {
           setSettingsModalOpen(false);
@@ -621,17 +478,6 @@ const LoyaltyPage = () => {
           form={formSettings}
           onFinish={handleSubmitSettings}
         >
-          <Form.Item
-            label="Баллов за каждые 100 ₽"
-            name="points_per_100_rub"
-            rules={[
-              { required: true, message: 'Укажите количество баллов' },
-              { type: 'number', min: 0, message: 'Значение не может быть отрицательным' },
-            ]}
-            extra="Например, 5 — это 5 баллов за каждые 100 рублей стоимости услуги. При записи на услугу 500 ₽ клиент получит 25 баллов."
-          >
-            <InputNumber min={0} max={100} style={{ width: '100%' }} />
-          </Form.Item>
           <Form.Item
             label="Приветственный бонус после регистрации"
             name="welcome_bonus_amount"
@@ -669,62 +515,6 @@ const LoyaltyPage = () => {
           <Typography.Text type="secondary">
             Настройки сохраняются в базе данных и применяются сразу.
           </Typography.Text>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={bonusModalInitial ? 'Редактировать бонус' : 'Новый бонус'}
-        open={bonusModalOpen}
-        onCancel={() => {
-          setBonusModalOpen(false);
-          setBonusModalInitial(null);
-          formBonus.resetFields();
-        }}
-        onOk={() => formBonus.submit()}
-        okText="Сохранить"
-        destroyOnClose
-      >
-        <Form
-          layout="vertical"
-          form={formBonus}
-          onFinish={handleSubmitBonus}
-        >
-          <Form.Item
-            label="Название бонуса"
-            name="title"
-            rules={[{ required: true, message: 'Введите название' }]}
-          >
-            <Input placeholder="Например, Скидка 10% на массаж" />
-          </Form.Item>
-          <Form.Item
-            label="Описание"
-            name="description"
-            rules={[{ required: true, message: 'Введите описание бонуса' }]}
-          >
-            <Input.TextArea rows={3} placeholder="Кратко опишите, что получает гость" />
-          </Form.Item>
-          <Form.Item
-            label="Иконка"
-            name="icon"
-          >
-            <Select options={iconOptions} />
-          </Form.Item>
-          <Form.Item
-            label="Минимальный уровень"
-            name="min_level_id"
-          >
-            <Select
-              allowClear
-              placeholder="Все уровни"
-              options={levelOptions}
-            />
-          </Form.Item>
-          <Form.Item
-            label="Порядок отображения"
-            name="order_index"
-          >
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
         </Form>
       </Modal>
     </Space>

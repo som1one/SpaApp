@@ -28,8 +28,10 @@ from app.services.audit_service import AuditService
 from app.services.loyalty_service import (
     TRANSACTION_TYPE_BULK,
     TRANSACTION_TYPE_MANUAL,
+    TRANSACTION_TYPE_TEMPORARY,
     add_loyalty_transaction,
     get_loyalty_settings,
+    get_user_loyalty_level,
     refresh_user_loyalty_level,
 )
 
@@ -259,11 +261,13 @@ class LoyaltyAdjustRequest(BaseModel):
     bonuses_delta: int | None = None
     reason: str | None = None
     services: List[LoyaltyServiceAward] | None = None
+    expires_in_days: int | None = None
 
 
 class BulkAwardRequest(BaseModel):
     bonuses_amount: int
     reason: str | None = None
+    expires_in_days: int | None = None
 
 
 @router.post("/users/{user_id}/adjust")
@@ -284,11 +288,15 @@ async def adjust_user_loyalty_bonuses(
     reason_parts = []
     bonuses_awarded = 0
 
-    from app.services.loyalty_service import _get_user_loyalty_level, get_loyalty_settings
-
-    user_level = _get_user_loyalty_level(db, user)
+    user_level = get_user_loyalty_level(db, user)
     cashback_percent = user_level.cashback_percent if user_level else 1
     loyalty_settings = get_loyalty_settings(db)
+    expires_in_days = payload.expires_in_days
+    if expires_in_days is not None and expires_in_days <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Срок действия временных бонусов должен быть больше 0 дней",
+        )
 
     services = payload.services or []
     if services:
@@ -351,12 +359,12 @@ async def adjust_user_loyalty_bonuses(
         db=db,
         user=user,
         amount=total_delta,
-        transaction_type=TRANSACTION_TYPE_MANUAL,
-        title="Ручное начисление",
+        transaction_type=TRANSACTION_TYPE_TEMPORARY if expires_in_days else TRANSACTION_TYPE_MANUAL,
+        title="Временное начисление" if expires_in_days else "Ручное начисление",
         description=reason_text,
         reason=reason_text,
         booking=booking,
-        expires_in_days=loyalty_settings.bonus_expiry_days,
+        expires_in_days=expires_in_days if expires_in_days is not None else loyalty_settings.bonus_expiry_days,
     )
 
     new_level = refresh_user_loyalty_level(db, user)
@@ -372,6 +380,7 @@ async def adjust_user_loyalty_bonuses(
         payload={
             "delta": total_delta,
             "reason": reason_text,
+            "expires_in_days": expires_in_days,
             "old_bonuses": current_bonuses,
             "new_bonuses": user.loyalty_bonuses,
             "services": [service.model_dump() for service in services] if services else None,
@@ -401,6 +410,11 @@ async def bulk_award_loyalty_bonuses(
     """Массовое начисление бонусов всем пользователям."""
     if payload.bonuses_amount <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Количество бонусов должно быть больше 0")
+    if payload.expires_in_days is not None and payload.expires_in_days <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Срок действия временных бонусов должен быть больше 0 дней",
+        )
 
     from app.services.loyalty_service import get_loyalty_settings
 
@@ -415,11 +429,11 @@ async def bulk_award_loyalty_bonuses(
             db=db,
             user=user,
             amount=payload.bonuses_amount,
-            transaction_type=TRANSACTION_TYPE_BULK,
-            title="Массовое начисление",
+            transaction_type=TRANSACTION_TYPE_TEMPORARY if payload.expires_in_days else TRANSACTION_TYPE_BULK,
+            title="Временное массовое начисление" if payload.expires_in_days else "Массовое начисление",
             description=reason_text,
             reason=reason_text,
-            expires_in_days=loyalty_settings.bonus_expiry_days,
+            expires_in_days=payload.expires_in_days if payload.expires_in_days is not None else loyalty_settings.bonus_expiry_days,
         )
 
     db.commit()
@@ -432,12 +446,18 @@ async def bulk_award_loyalty_bonuses(
         payload={
             "bonuses_amount": payload.bonuses_amount,
             "reason": reason_text,
+            "expires_in_days": payload.expires_in_days,
             "processed_users": len(users),
         },
         request=http_request,
     )
 
-    return {"success": True, "processed_users": len(users), "bonuses_amount": payload.bonuses_amount}
+    return {
+        "success": True,
+        "processed_users": len(users),
+        "bonuses_amount": payload.bonuses_amount,
+        "expires_in_days": payload.expires_in_days,
+    }
 
 
 @router.get("/users/by-code/{unique_code}")
@@ -455,14 +475,48 @@ async def get_user_by_code(
         )
 
     from app.schemas.admin_users import AdminUserResponse
-    from app.services.loyalty_service import _get_user_loyalty_level
 
-    user_level = _get_user_loyalty_level(db, user)
+    user_level = get_user_loyalty_level(db, user)
     cashback_percent = user_level.cashback_percent if user_level else 1
 
     user_data = AdminUserResponse.model_validate(user)
     user_data.cashback_percent = cashback_percent
     return user_data
+
+
+@router.post("/recalculate-levels")
+async def recalculate_loyalty_levels(
+    http_request: Request,
+    db: Session = Depends(get_db),
+    admin=Depends(admin_required),
+):
+    """Пересчитать уровни лояльности всем пользователям по завершённым визитам."""
+    users = db.query(User).all()
+    updated = 0
+
+    for user in users:
+        before = user.loyalty_level_id
+        level = refresh_user_loyalty_level(db, user)
+        after = level.id if level else None
+        if before != after:
+            updated += 1
+
+    db.commit()
+
+    AuditService.log_action(
+        db,
+        admin_id=admin.id,
+        action="recalculate_loyalty_levels",
+        entity="loyalty_level",
+        payload={"processed_users": len(users), "updated_users": updated},
+        request=http_request,
+    )
+
+    return {
+        "success": True,
+        "processed_users": len(users),
+        "updated_users": updated,
+    }
 
 
 def _get_or_create_loyalty_settings_model(db: Session) -> LoyaltyProgramSettings:

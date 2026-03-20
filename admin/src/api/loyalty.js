@@ -20,26 +20,6 @@ export const deleteLoyaltyLevel = async (levelId) => {
   return response.data;
 };
 
-export const fetchLoyaltyBonuses = async () => {
-  const response = await apiClient.get('/admin/loyalty/bonuses');
-  return response.data;
-};
-
-export const createLoyaltyBonus = async (payload) => {
-  const response = await apiClient.post('/admin/loyalty/bonuses', payload);
-  return response.data;
-};
-
-export const updateLoyaltyBonus = async (bonusId, payload) => {
-  const response = await apiClient.patch(`/admin/loyalty/bonuses/${bonusId}`, payload);
-  return response.data;
-};
-
-export const deleteLoyaltyBonus = async (bonusId) => {
-  const response = await apiClient.delete(`/admin/loyalty/bonuses/${bonusId}`);
-  return response.data;
-};
-
 export const adjustUserLoyalty = async (userId, payload) => {
   const response = await apiClient.post(`/admin/loyalty/users/${userId}/adjust`, payload);
   return response.data;
@@ -60,7 +40,7 @@ export const bulkAwardLoyalty = async (payload) => {
   return response.data;
 };
 
-export const getUserByCode = async (uniqueCode) => {
-  const response = await apiClient.get(`/admin/loyalty/users/by-code/${uniqueCode}`);
+export const recalculateLoyaltyLevels = async () => {
+  const response = await apiClient.post('/admin/loyalty/recalculate-levels');
   return response.data;
 };
