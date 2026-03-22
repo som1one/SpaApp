@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.apis.dependencies import admin_required
 from app.core.database import get_db
-from app.models.custom_content import CustomContentBlock
+from app.models.custom_content import CustomContentBlock, ContentBlockType
 from app.schemas.custom_content import (
     CustomContentBlockResponse,
     CustomContentBlockCreate,
@@ -19,6 +19,16 @@ from app.services.storage_service import StorageService
 
 router = APIRouter(prefix="/admin/custom-content", tags=["Admin Custom Content"])
 logger = logging.getLogger(__name__)
+
+
+def _orm_block_type(value):
+    """Pydantic отдаёт ContentBlockTypeEnum, в ORM нужен ContentBlockType (SQLAlchemy ENUM)."""
+    if value is None:
+        return None
+    if isinstance(value, ContentBlockType):
+        return value
+    raw = value.value if hasattr(value, "value") else value
+    return ContentBlockType(raw)
 
 
 @router.post("/upload")
@@ -60,7 +70,9 @@ async def create_custom_content_block(
     admin=Depends(admin_required),
 ):
     """Создать новый блок контента"""
-    block = CustomContentBlock(**payload.model_dump())
+    data = payload.model_dump()
+    data["block_type"] = _orm_block_type(data.get("block_type"))
+    block = CustomContentBlock(**data)
     db.add(block)
     db.commit()
     db.refresh(block)
@@ -105,6 +117,8 @@ async def update_custom_content_block(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Блок не найден")
     
     update_data = payload.model_dump(exclude_unset=True)
+    if "block_type" in update_data:
+        update_data["block_type"] = _orm_block_type(update_data["block_type"])
     for field, value in update_data.items():
         setattr(block, field, value)
     

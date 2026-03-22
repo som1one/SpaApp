@@ -93,8 +93,17 @@ const CustomContentPage = () => {
     }
   }, [form]);
 
+  const trimOrNull = (v) => {
+    if (v === undefined || v === null) return null;
+    if (typeof v === 'string') {
+      const t = v.trim();
+      return t === '' ? null : t;
+    }
+    return v;
+  };
+
   const handleSubmit = async (values) => {
-    const payload = values.block_type === 'spa_travel'
+    const base = values.block_type === 'spa_travel'
       ? {
           ...values,
           description: null,
@@ -104,7 +113,20 @@ const CustomContentPage = () => {
           gradient_start: null,
           gradient_end: null,
         }
-      : values;
+      : { ...values };
+
+    const payload = {
+      ...base,
+      subtitle: trimOrNull(base.subtitle),
+      description: trimOrNull(base.description),
+      image_url: trimOrNull(base.image_url),
+      action_url: trimOrNull(base.action_url),
+      action_text: trimOrNull(base.action_text),
+      background_color: trimOrNull(base.background_color),
+      text_color: trimOrNull(base.text_color),
+      gradient_start: trimOrNull(base.gradient_start),
+      gradient_end: trimOrNull(base.gradient_end),
+    };
 
     try {
       if (modalInitial) {
@@ -338,10 +360,10 @@ const CustomContentPage = () => {
             </Space>
           </Form.Item>
           <Form.Item
-            label={selectedBlockType === 'spa_travel' ? 'Ссылка по нажатию' : 'URL действия (ссылка)'}
+            label={selectedBlockType === 'spa_travel' ? 'Ссылка по нажатию (необязательно)' : 'URL действия / ссылка (необязательно)'}
             name="action_url"
           >
-            <Input placeholder="https://example.com" />
+            <Input placeholder="Оставьте пустым, если переход не нужен" />
           </Form.Item>
           {selectedBlockType !== 'spa_travel' && (
             <Form.Item

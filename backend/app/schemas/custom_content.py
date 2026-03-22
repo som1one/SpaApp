@@ -1,9 +1,27 @@
 """
 Схемы для кастомных блоков контента
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from enum import Enum
+
+_OPTIONAL_STR_FIELDS = (
+    "subtitle",
+    "description",
+    "image_url",
+    "action_url",
+    "action_text",
+    "background_color",
+    "text_color",
+    "gradient_start",
+    "gradient_end",
+)
+
+
+def _empty_str_to_none(v):
+    if v == "":
+        return None
+    return v
 
 
 class ContentBlockTypeEnum(str, Enum):
@@ -51,6 +69,11 @@ class CustomContentBlockCreate(BaseModel):
     gradient_start: Optional[str] = None
     gradient_end: Optional[str] = None
 
+    @field_validator(*_OPTIONAL_STR_FIELDS, mode="before")
+    @classmethod
+    def optional_strings_empty_as_none(cls, v):
+        return _empty_str_to_none(v)
+
 
 class CustomContentBlockUpdate(BaseModel):
     """Обновление блока контента"""
@@ -67,3 +90,8 @@ class CustomContentBlockUpdate(BaseModel):
     text_color: Optional[str] = None
     gradient_start: Optional[str] = None
     gradient_end: Optional[str] = None
+
+    @field_validator(*_OPTIONAL_STR_FIELDS, mode="before")
+    @classmethod
+    def optional_strings_empty_as_none(cls, v):
+        return _empty_str_to_none(v)
