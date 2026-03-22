@@ -7,12 +7,15 @@ import {
   Modal,
   Select,
   Space,
+  Upload,
   Table,
   Tag,
   Typography,
   Switch,
   message,
+  Image,
 } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/useAuth';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -20,6 +23,7 @@ import {
   createCustomContentBlock,
   updateCustomContentBlock,
   deleteCustomContentBlock,
+  uploadCustomContentImage,
 } from '../api/customContent';
 
 const blockTypeOptions = [
@@ -38,6 +42,7 @@ const CustomContentPage = () => {
   const [form] = Form.useForm();
   const isSuperAdmin = user?.role === 'super_admin';
   const selectedBlockType = Form.useWatch('block_type', form);
+  const currentImageUrl = Form.useWatch('image_url', form);
 
   const loadBlocks = useCallback(async () => {
     try {
@@ -89,12 +94,24 @@ const CustomContentPage = () => {
   }, [form]);
 
   const handleSubmit = async (values) => {
+    const payload = values.block_type === 'spa_travel'
+      ? {
+          ...values,
+          description: null,
+          action_text: null,
+          background_color: null,
+          text_color: null,
+          gradient_start: null,
+          gradient_end: null,
+        }
+      : values;
+
     try {
       if (modalInitial) {
-        await updateCustomContentBlock(modalInitial.id, values);
+        await updateCustomContentBlock(modalInitial.id, payload);
         message.success('Блок обновлён');
       } else {
-        await createCustomContentBlock(values);
+        await createCustomContentBlock(payload);
         message.success('Блок создан');
       }
       setModalOpen(false);
@@ -124,6 +141,19 @@ const CustomContentPage = () => {
       },
     });
   }, [loadBlocks]);
+
+  const handleImageUpload = useCallback(async ({ file, onSuccess, onError }) => {
+    try {
+      const result = await uploadCustomContentImage(file);
+      form.setFieldValue('image_url', result.url);
+      message.success('Изображение загружено');
+      onSuccess?.(result);
+    } catch (error) {
+      const detail = error?.response?.data?.detail ?? 'Не удалось загрузить изображение';
+      message.error(detail);
+      onError?.(new Error(detail));
+    }
+  }, [form]);
 
   const columns = useMemo(
     () => [
@@ -279,10 +309,33 @@ const CustomContentPage = () => {
             </Form.Item>
           )}
           <Form.Item
-            label={selectedBlockType === 'spa_travel' ? 'Фото карточки (URL)' : 'URL изображения'}
+            label={selectedBlockType === 'spa_travel' ? 'Фото карточки' : 'Изображение'}
             name="image_url"
           >
-            <Input placeholder="https://example.com/image.jpg" />
+            <Input placeholder="/uploads/custom-content/example.jpg" />
+          </Form.Item>
+          <Form.Item label={selectedBlockType === 'spa_travel' ? 'Загрузить фото карточки' : 'Загрузить изображение'}>
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                customRequest={handleImageUpload}
+              >
+                <Button icon={<UploadOutlined />}>Загрузить изображение</Button>
+              </Upload>
+              {currentImageUrl ? (
+                <Image
+                  src={currentImageUrl}
+                  alt="Превью"
+                  width={220}
+                  style={{ borderRadius: 12, objectFit: 'cover' }}
+                />
+              ) : (
+                <Typography.Text type="secondary">
+                  Пока изображение не выбрано
+                </Typography.Text>
+              )}
+            </Space>
           </Form.Item>
           <Form.Item
             label={selectedBlockType === 'spa_travel' ? 'Ссылка по нажатию' : 'URL действия (ссылка)'}
@@ -318,30 +371,44 @@ const CustomContentPage = () => {
           >
             <Switch />
           </Form.Item>
-          <Form.Item
-            label="Цвет фона (HEX)"
-            name="background_color"
-          >
-            <Input placeholder="#FFFFFF" />
-          </Form.Item>
-          <Form.Item
-            label="Цвет текста (HEX)"
-            name="text_color"
-          >
-            <Input placeholder="#000000" />
-          </Form.Item>
-          <Form.Item
-            label="Градиент начало (HEX)"
-            name="gradient_start"
-          >
-            <Input placeholder="#4CAF50" />
-          </Form.Item>
-          <Form.Item
-            label="Градиент конец (HEX)"
-            name="gradient_end"
-          >
-            <Input placeholder="#81C784" />
-          </Form.Item>
+          {selectedBlockType !== 'spa_travel' && (
+            <Form.Item
+              label="Цвет фона (HEX)"
+              name="background_color"
+            >
+              <Input placeholder="#FFFFFF" />
+            </Form.Item>
+          )}
+          {selectedBlockType !== 'spa_travel' && (
+            <Form.Item
+              label="Цвет текста (HEX)"
+              name="text_color"
+            >
+              <Input placeholder="#000000" />
+            </Form.Item>
+          )}
+          {selectedBlockType !== 'spa_travel' && (
+            <Form.Item
+              label="Градиент начало (HEX)"
+              name="gradient_start"
+            >
+              <Input placeholder="#4CAF50" />
+            </Form.Item>
+          )}
+          {selectedBlockType !== 'spa_travel' && (
+            <Form.Item
+              label="Градиент конец (HEX)"
+              name="gradient_end"
+            >
+              <Input placeholder="#81C784" />
+            </Form.Item>
+          )}
+          {selectedBlockType === 'spa_travel' && (
+            <Typography.Text type="secondary">
+              Для карточек «Спа-терапии» используется только изображение, текст и ссылка.
+              Цвета и градиенты здесь не применяются.
+            </Typography.Text>
+          )}
         </Form>
       </Modal>
     </Space>

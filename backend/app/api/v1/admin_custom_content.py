@@ -3,7 +3,7 @@
 """
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.apis.dependencies import admin_required
@@ -15,9 +15,27 @@ from app.schemas.custom_content import (
     CustomContentBlockUpdate,
 )
 from app.services.audit_service import AuditService
+from app.services.storage_service import StorageService
 
 router = APIRouter(prefix="/admin/custom-content", tags=["Admin Custom Content"])
 logger = logging.getLogger(__name__)
+
+
+@router.post("/upload")
+async def upload_custom_content_image(
+    file: UploadFile = File(...),
+    _: dict = Depends(admin_required),
+):
+    """Загрузить изображение для кастомного контента"""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Файл должен быть изображением",
+        )
+
+    url = StorageService.save_custom_content_image(file)
+    logger.info("Загружено изображение кастомного контента", extra={"url": url})
+    return {"url": url}
 
 
 @router.get("", response_model=List[CustomContentBlockResponse])

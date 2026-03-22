@@ -24,3 +24,13 @@ export const deleteCustomContentBlock = async (id) => {
   await apiClient.delete(`/admin/custom-content/${id}`);
 };
 
+export const uploadCustomContentImage = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post('/admin/custom-content/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
