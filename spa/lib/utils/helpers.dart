@@ -38,14 +38,17 @@ class Helpers {
     try {
       final trimmed = url.trim();
       if (trimmed.isEmpty) return null;
+      final normalized = trimmed.startsWith('/custom-content/')
+          ? '/uploads$trimmed'
+          : trimmed;
 
       // Валидация и исправление URL
-      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
         // Проверяем валидность абсолютного URL
         try {
-          final uri = Uri.parse(trimmed);
+          final uri = Uri.parse(normalized);
           if (uri.hasScheme && uri.hasAuthority) {
-            return trimmed;
+            return normalized;
           }
         } catch (e) {
           // Некорректный URL, возвращаем null
@@ -53,20 +56,20 @@ class Helpers {
         }
       }
 
-      if (trimmed.startsWith('file://')) {
+      if (normalized.startsWith('file://')) {
         // file://uploads/... -> http://host/uploads/...
-        final withoutScheme = trimmed.replaceFirst('file://', '');
+        final withoutScheme = normalized.replaceFirst('file://', '');
         if (withoutScheme.startsWith('/')) {
           return '${AppConstants.baseUrl}$withoutScheme';
         }
         return '${AppConstants.baseUrl}/$withoutScheme';
       }
 
-      if (trimmed.startsWith('/')) {
-        return '${AppConstants.baseUrl}$trimmed';
+      if (normalized.startsWith('/')) {
+        return '${AppConstants.baseUrl}$normalized';
       }
 
-      return '${AppConstants.baseUrl}/$trimmed';
+      return '${AppConstants.baseUrl}/$normalized';
     } catch (e) {
       // В случае любой ошибки возвращаем null
       return null;

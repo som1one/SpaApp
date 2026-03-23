@@ -333,6 +333,11 @@ const CustomContentPage = () => {
           <Form.Item
             label={selectedBlockType === 'spa_travel' ? 'Фото карточки' : 'Изображение'}
             name="image_url"
+            rules={
+              selectedBlockType === 'spa_travel'
+                ? [{ required: true, message: 'Загрузите фото для карточки' }]
+                : undefined
+            }
           >
             <Input placeholder="/uploads/custom-content/example.jpg" />
           </Form.Item>

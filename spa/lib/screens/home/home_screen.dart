@@ -398,6 +398,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   _buildCustomContentBlocks(contentBlocks),
                   const SizedBox(height: 32),
                 ],
+                _buildActionButtons(),
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -739,6 +741,183 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 size: 16,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Специальные предложения',
+            style: AppTextStyles.heading3.copyWith(
+              fontFamily: 'Inter24',
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildActionCard(
+            title: 'Подарочные сертификаты',
+            subtitle: 'Идеальный подарок для близких',
+            icon: Icons.card_giftcard_rounded,
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onPressed: () =>
+                _openExternalUrl('https://prirodaspa.ru/gift-sertificate'),
+          ),
+          const SizedBox(height: 16),
+          _buildActionCard(
+            title: 'Спа-меню',
+            subtitle: 'Выгодные условия на курсы процедур',
+            icon: Icons.local_florist_rounded,
+            gradient: const LinearGradient(
+              colors: [AppColors.primaryLight, AppColors.primary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onPressed: () => _openExternalUrl('https://prirodaspa.ru/spa-menu'),
+          ),
+          const SizedBox(height: 16),
+          _buildActionCard(
+            title: 'Каталог товаров',
+            subtitle: 'Профессиональная косметика для дома',
+            icon: Icons.shopping_bag_rounded,
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onPressed: () => _openExternalUrl(
+                'https://priroda-therapy.ru/priroda-spa-catalog'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Gradient gradient,
+    required VoidCallback? onPressed,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.buttonPrimary.withOpacity(0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.buttonPrimary.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.shadowLight,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(22),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: gradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradient.colors.first.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppColors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.heading3.copyWith(
+                            fontFamily: 'Inter24',
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontFamily: 'Inter18',
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.buttonPrimary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: AppColors.buttonPrimary,
+                    size: 16,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

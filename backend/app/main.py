@@ -89,13 +89,16 @@ app = FastAPI(
 
 # CORS настройки для работы с Flutter приложением и админкой
 cors_origins = settings.cors_origins_list
+localhost_origin_regex = r"https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 # Если есть wildcard в development, используем его
 if not settings.is_production and "*" in cors_origins:
     cors_origins = ["*"]
+    localhost_origin_regex = None
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
+    allow_origin_regex=localhost_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

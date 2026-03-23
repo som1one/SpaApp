@@ -45,6 +45,8 @@ services:
       DATABASE_URL: postgresql://user:password@postgres:5432/spa_db
     ports:
       - "9003:8000"
+    volumes:
+      - ./uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy

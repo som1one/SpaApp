@@ -24,7 +24,7 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
   int _currentPage = 0;
   Timer? _autoSlideTimer;
 
-  late final List<PopularJourneyItem> _journeys = widget.items ?? const [];
+  List<PopularJourneyItem> get _journeys => widget.items ?? const [];
 
   @override
   void dispose() {
@@ -136,14 +136,12 @@ class _JourneyCardData {
   final String subtitle;
   final String? url;
   final String? imageUrl;
-  final String? imageAssetPath;
 
   const _JourneyCardData({
     required this.title,
     required this.subtitle,
     this.url,
     this.imageUrl,
-    this.imageAssetPath,
   });
 }
 
@@ -199,14 +197,13 @@ class _JourneyCard extends StatelessWidget {
                     ),
                   )
                 else
-                  Image.asset(
-                    data.imageAssetPath ?? 'assets/images/Home/IMG_2918.png',
-                    fit: BoxFit.cover,
-                    // Кешируем изображение для плавности
-                    cacheWidth: (MediaQuery.of(context).size.width *
-                            0.82 *
-                            MediaQuery.of(context).devicePixelRatio)
-                        .round(),
+                  Container(
+                    color: AppColors.buttonPrimary.withOpacity(0.08),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.image_not_supported_outlined,
+                      color: Colors.black.withOpacity(0.25),
+                    ),
                   ),
                 Container(
                   decoration: BoxDecoration(
@@ -266,6 +263,5 @@ class PopularJourneyItem extends _JourneyCardData {
     required super.subtitle,
     super.url,
     super.imageUrl,
-    super.imageAssetPath,
   });
 }
