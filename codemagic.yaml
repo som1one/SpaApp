@@ -1,4 +1,4 @@
-﻿workflows:
+workflows:
   ios-release:
     name: iOS Release
     instance_type: mac_mini_m2
@@ -31,9 +31,11 @@
           VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
           BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
           
-          # Убеждаемся, что build number минимум 11 (выше предыдущей версии 10)
-          if [ -z "$BUILD_NUMBER" ] || [ "$BUILD_NUMBER" -lt 11 ]; then
-            BUILD_NUMBER=11
+          # CFBundleVersion должен каждый раз быть больше последней загрузки в App Store Connect.
+          # Не подставляем «минимум» вручную — иначе получите 409 DUPLICATE после следующего релиза.
+          if ! [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: в pubspec.yaml укажите версию с номером сборки, например version: 1.0.3+13"
+            exit 1
           fi
           
           echo "Using VERSION_NAME=$VERSION_NAME"
