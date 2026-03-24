@@ -23,32 +23,28 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
-      - name: Versioning
+      # Не используйте имя BUILD_NUMBER: в Codemagic это встроенная переменная (счётчик сборок
+      # воркфлоу). На 11-й сборке она равна 11 — из‑за этого в IPA попадал CFBundleVersion 11,
+      # а не номер из pubspec.yaml.
+      - name: Flutter build IPA (версия из pubspec)
         script: |
           set -e
-          # Извлекаем версию из pubspec.yaml (из корневой директории spa)
           VERSION_LINE=$(grep "^version:" pubspec.yaml)
-          VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
-          BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
-          
-          # CFBundleVersion должен каждый раз быть больше последней загрузки в App Store Connect.
-          # Не подставляем «минимум» вручную — иначе получите 409 DUPLICATE после следующего релиза.
-          if ! [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: в pubspec.yaml укажите версию с номером сборки, например version: 1.0.3+13"
+          IOS_VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
+          IOS_BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
+          if ! [[ "$IOS_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: в pubspec.yaml укажите версию с номером сборки, например version: 1.0.3+14"
             exit 1
           fi
-          
-          echo "Using VERSION_NAME=$VERSION_NAME"
-          echo "Using BUILD_NUMBER=$BUILD_NUMBER"
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$CM_ENV"
-          echo "VERSION_NAME=$VERSION_NAME" >> "$CM_ENV"
-
+          echo "CFBundleShortVersionString=$IOS_VERSION_NAME CFBundleVersion=$IOS_BUILD_NUMBER"
+          echo "(справочно: Codemagic BUILD_NUMBER=$BUILD_NUMBER — это не версия приложения)"
           cd ios
-          agvtool new-version -all "$BUILD_NUMBER"
-          agvtool new-marketing-version "$VERSION_NAME"
-      - name: Flutter build IPA and automatic versioning
-        script: |
-          flutter build ipa --release --build-name="$VERSION_NAME" --build-number="$BUILD_NUMBER"
+          agvtool new-version -all "$IOS_BUILD_NUMBER"
+          agvtool new-marketing-version "$IOS_VERSION_NAME"
+          cd ..
+          flutter build ipa --release \
+            --build-name="$IOS_VERSION_NAME" \
+            --build-number="$IOS_BUILD_NUMBER"
 
     artifacts:
       - build/ios/iphonesimulator/Runner.app
