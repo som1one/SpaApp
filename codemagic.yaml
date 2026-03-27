@@ -14,6 +14,11 @@ workflows:
       bundle_identifier: ru.prirodaspa.app
 
     scripts:
+      - name: Проверка — используется codemagic.yaml
+        script: |
+          echo "=== SPAAPP_YAML_WORKFLOW_ACTIVE ==="
+          echo "Если этой строки нет в логе, в Codemagic включён воркфлоу из UI, а не этот файл."
+          echo "Тогда откройте Application settings → codemagic.yaml → включите конфиг из репозитория."
       - name: Get Flutter packages
         script: |
           flutter pub get
@@ -26,21 +31,32 @@ workflows:
       # Не используйте имя BUILD_NUMBER: в Codemagic это встроенная переменная (счётчик сборок
       # воркфлоу). На 11-й сборке она равна 11 — из‑за этого в IPA попадал CFBundleVersion 11,
       # а не номер из pubspec.yaml.
-      - name: Flutter build IPA (версия из pubspec)
+      - name: Flutter build IPA (уникальный CFBundleVersion)
         script: |
           set -e
-          # У Codemagic BUILD_NUMBER = счётчик воркфлоу; часть toolchain читает её из env.
           CM_WORKFLOW_COUNTER="${BUILD_NUMBER:-}"
           VERSION_LINE=$(grep "^version:" pubspec.yaml)
           IOS_VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
-          IOS_BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
-          if ! [[ "$IOS_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: в pubspec.yaml укажите версию с номером сборки, например version: 1.0.3+15"
+          PUBSPEC_BUILD=$(echo "$VERSION_LINE" | sed 's/.*+//')
+          if ! [[ "$PUBSPEC_BUILD" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: в pubspec.yaml укажите version: 1.0.3+N (цифры после +)"
             exit 1
           fi
+          # Уникальный номер на каждый запуск — обходит коллизию с env BUILD_NUMBER Codemagic (= 11 на 11-й сборке).
+          IOS_BUILD_NUMBER=$(date +%s)
+          if [ "$IOS_BUILD_NUMBER" -le "$PUBSPEC_BUILD" ]; then
+            IOS_BUILD_NUMBER=$((PUBSPEC_BUILD + 1))
+          fi
+          if [ "$IOS_BUILD_NUMBER" -le 11 ]; then
+            IOS_BUILD_NUMBER=12
+          fi
           export BUILD_NUMBER="$IOS_BUILD_NUMBER"
+          export FLUTTER_BUILD_NUMBER="$IOS_BUILD_NUMBER"
+          export FLUTTER_BUILD_NAME="$IOS_VERSION_NAME"
           echo "CFBundleShortVersionString=$IOS_VERSION_NAME CFBundleVersion=$IOS_BUILD_NUMBER"
-          echo "(счётчик воркфлоу Codemagic: ${CM_WORKFLOW_COUNTER:-n/a}; export BUILD_NUMBER=$BUILD_NUMBER для subprocess Xcode/Flutter)"
+          echo "pubspec+N=$PUBSPEC_BUILD | счётчик воркфлоу Codemagic=$CM_WORKFLOW_COUNTER (не используем как версию приложения)"
+          rm -rf build/ios/ipa
+          find . -path "./.git" -prune -o -name "*.ipa" -type f -print -delete
           cd ios
           agvtool new-version -all "$IOS_BUILD_NUMBER"
           agvtool new-marketing-version "$IOS_VERSION_NAME"
@@ -51,6 +67,7 @@ workflows:
             echo "ERROR: IPA не найден в build/ios/ipa/"
             exit 1
           fi
+          echo "Публикуемый файл: $IPA (mtime $(stat -f '%Sm' "$IPA" 2>/dev/null || stat -c '%y' "$IPA" 2>/dev/null))"
           INFO_REL=$(unzip -Z1 "$IPA" | grep -E '^Payload/[^/]+\.app/Info\.plist$' | grep -v PlugIns | head -1)
           CFV=$(unzip -p "$IPA" "$INFO_REL" | plutil -extract CFBundleVersion raw -)
           echo "Проверка IPA: CFBundleVersion=$CFV ($INFO_REL)"
@@ -59,7 +76,7 @@ workflows:
             exit 1
           fi
           if [ "$CFV" -le 11 ]; then
-            echo "ERROR: для загрузки в App Store Connect нужен CFBundleVersion > 11 (сейчас $CFV)"
+            echo "ERROR: CFBundleVersion должен быть > 11 (сейчас $CFV)"
             exit 1
           fi
 
