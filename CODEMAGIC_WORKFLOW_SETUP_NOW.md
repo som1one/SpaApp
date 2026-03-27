@@ -115,8 +115,9 @@ pod install
 cd ..
 ```
 
-**Script 3: Build IPA**
+**Script 3: Build IPA** (обязательно сначала версия для CI — иначе `BUILD_NUMBER` Codemagic подставит 11 и App Store отклонит загрузку)
 ```bash
+bash scripts/ci_ios_version_override.sh
 flutter build ipa --release
 ```
 

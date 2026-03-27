@@ -35,26 +35,15 @@ workflows:
         script: |
           set -e
           CM_WORKFLOW_COUNTER="${BUILD_NUMBER:-}"
-          VERSION_LINE=$(grep "^version:" pubspec.yaml)
-          IOS_VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
-          PUBSPEC_BUILD=$(echo "$VERSION_LINE" | sed 's/.*+//')
-          if ! [[ "$PUBSPEC_BUILD" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: в pubspec.yaml укажите version: 1.0.3+N (цифры после +)"
-            exit 1
-          fi
-          # Уникальный номер на каждый запуск — обходит коллизию с env BUILD_NUMBER Codemagic (= 11 на 11-й сборке).
-          IOS_BUILD_NUMBER=$(date +%s)
-          if [ "$IOS_BUILD_NUMBER" -le "$PUBSPEC_BUILD" ]; then
-            IOS_BUILD_NUMBER=$((PUBSPEC_BUILD + 1))
-          fi
-          if [ "$IOS_BUILD_NUMBER" -le 11 ]; then
-            IOS_BUILD_NUMBER=12
-          fi
+          bash scripts/ci_ios_version_override.sh
+          test -f ios/Flutter/CIVersion.xcconfig
+          IOS_VERSION_NAME=$(grep '^FLUTTER_BUILD_NAME=' ios/Flutter/CIVersion.xcconfig | cut -d= -f2-)
+          IOS_BUILD_NUMBER=$(grep '^FLUTTER_BUILD_NUMBER=' ios/Flutter/CIVersion.xcconfig | cut -d= -f2-)
           export BUILD_NUMBER="$IOS_BUILD_NUMBER"
           export FLUTTER_BUILD_NUMBER="$IOS_BUILD_NUMBER"
           export FLUTTER_BUILD_NAME="$IOS_VERSION_NAME"
           echo "CFBundleShortVersionString=$IOS_VERSION_NAME CFBundleVersion=$IOS_BUILD_NUMBER"
-          echo "pubspec+N=$PUBSPEC_BUILD | счётчик воркфлоу Codemagic=$CM_WORKFLOW_COUNTER (не используем как версию приложения)"
+          echo "pubspec+N из CIVersion; счётчик воркфлоу Codemagic=$CM_WORKFLOW_COUNTER (не CFBundleVersion)"
           rm -rf build/ios/ipa
           find . -path "./.git" -prune -o -name "*.ipa" -type f -print -delete
           cd ios
