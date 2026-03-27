@@ -29,29 +29,46 @@ workflows:
       - name: Flutter build IPA (версия из pubspec)
         script: |
           set -e
+          # У Codemagic BUILD_NUMBER = счётчик воркфлоу; часть toolchain читает её из env.
+          CM_WORKFLOW_COUNTER="${BUILD_NUMBER:-}"
           VERSION_LINE=$(grep "^version:" pubspec.yaml)
           IOS_VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
           IOS_BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
           if ! [[ "$IOS_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: в pubspec.yaml укажите версию с номером сборки, например version: 1.0.3+14"
+            echo "ERROR: в pubspec.yaml укажите версию с номером сборки, например version: 1.0.3+15"
             exit 1
           fi
+          export BUILD_NUMBER="$IOS_BUILD_NUMBER"
           echo "CFBundleShortVersionString=$IOS_VERSION_NAME CFBundleVersion=$IOS_BUILD_NUMBER"
-          echo "(справочно: Codemagic BUILD_NUMBER=$BUILD_NUMBER — это не версия приложения)"
+          echo "(счётчик воркфлоу Codemagic: ${CM_WORKFLOW_COUNTER:-n/a}; export BUILD_NUMBER=$BUILD_NUMBER для subprocess Xcode/Flutter)"
           cd ios
           agvtool new-version -all "$IOS_BUILD_NUMBER"
           agvtool new-marketing-version "$IOS_VERSION_NAME"
           cd ..
-          flutter build ipa --release \
-            --build-name="$IOS_VERSION_NAME" \
-            --build-number="$IOS_BUILD_NUMBER"
+          flutter build ipa --release --build-name="$IOS_VERSION_NAME" --build-number="$IOS_BUILD_NUMBER"
+          IPA=$(ls build/ios/ipa/*.ipa 2>/dev/null | head -1)
+          if [ -z "$IPA" ]; then
+            echo "ERROR: IPA не найден в build/ios/ipa/"
+            exit 1
+          fi
+          INFO_REL=$(unzip -Z1 "$IPA" | grep -E '^Payload/[^/]+\.app/Info\.plist$' | grep -v PlugIns | head -1)
+          CFV=$(unzip -p "$IPA" "$INFO_REL" | plutil -extract CFBundleVersion raw -)
+          echo "Проверка IPA: CFBundleVersion=$CFV ($INFO_REL)"
+          if [ "$CFV" != "$IOS_BUILD_NUMBER" ]; then
+            echo "ERROR: в IPA ожидался CFBundleVersion=$IOS_BUILD_NUMBER, фактически $CFV"
+            exit 1
+          fi
+          if [ "$CFV" -le 11 ]; then
+            echo "ERROR: для загрузки в App Store Connect нужен CFBundleVersion > 11 (сейчас $CFV)"
+            exit 1
+          fi
 
     artifacts:
       - build/ios/iphonesimulator/Runner.app
       - /tmp/xcodebuild_logs/*.log
       - /tmp/xcodebuild_logs/iosApp.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
-      - /Users/builder/clone/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
       - flutter_drive.log
 
     publishing:
