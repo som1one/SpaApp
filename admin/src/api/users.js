@@ -46,3 +46,8 @@ export const exportUsersExcel = async ({
   });
   return response.data;
 };
+
+export const fetchUserYclientsSnapshot = async (userId) => {
+  const response = await apiClient.get(`/admin/users/${userId}/yclients`);
+  return response.data;
+};

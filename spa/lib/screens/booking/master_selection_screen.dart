@@ -45,14 +45,14 @@ class _MasterSelectionScreenState extends State<MasterSelectionScreen> {
     try {
       final staff = await _bookingService.getAvailableStaff(widget.serviceId);
       if (!mounted) return;
-      
+
       setState(() {
         _staff = staff;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      
+
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -68,11 +68,12 @@ class _MasterSelectionScreenState extends State<MasterSelectionScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Выберите мастера',
+          'Выберите спа-терапевта',
           style: AppTextStyles.heading3.copyWith(
             fontFamily: 'Inter24',
             color: AppColors.textPrimary,
@@ -98,7 +99,8 @@ class _MasterSelectionScreenState extends State<MasterSelectionScreen> {
       padding: const EdgeInsets.all(20),
       itemCount: 3,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (_, __) => const SkeletonLoader(width: double.infinity, height: 100),
+      itemBuilder: (_, __) =>
+          const SkeletonLoader(width: double.infinity, height: 100),
     );
   }
 
@@ -203,7 +205,8 @@ class _MasterSelectionScreenState extends State<MasterSelectionScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.star, color: Color(0xFFFFD700), size: 16),
+                          const Icon(Icons.star,
+                              color: Color(0xFFFFD700), size: 16),
                           const SizedBox(width: 4),
                           Text(
                             staff.rating!.toStringAsFixed(1),
@@ -244,4 +247,3 @@ class _MasterSelectionScreenState extends State<MasterSelectionScreen> {
     );
   }
 }
-

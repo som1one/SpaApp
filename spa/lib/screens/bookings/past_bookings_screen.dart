@@ -326,7 +326,7 @@ class _PastBookingsScreenState extends State<PastBookingsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Мастер: ${booking.masterName}',
+                    'Спа-терапевт: ${booking.masterName}',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),

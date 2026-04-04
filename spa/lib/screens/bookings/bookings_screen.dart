@@ -25,7 +25,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
   final _apiService = ApiService();
   final _authService = AuthService();
   final _localBookingService = LocalBookingService();
-  
+
   List<Booking> _bookings = [];
   bool _isLoading = true;
   String? _error;
@@ -74,12 +74,12 @@ class _BookingsScreenState extends State<BookingsScreen> {
           params['status'] = _selectedStatus!;
         }
 
-        final queryString = params.isEmpty 
-            ? '' 
+        final queryString = params.isEmpty
+            ? ''
             : '?${params.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}';
-        
+
         final response = await _apiService.get('/bookings$queryString');
-        
+
         if (response is List) {
           apiBookings = (response as List)
               .where((item) => item is Map<String, dynamic>)
@@ -92,9 +92,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
       // Загружаем локальные записи
       final localBookingsData = await _localBookingService.getLocalBookings();
-      final localBookings = localBookingsData
-          .map((json) => Booking.fromJson(json))
-          .toList();
+      final localBookings =
+          localBookingsData.map((json) => Booking.fromJson(json)).toList();
 
       // Объединяем записи
       final allBookings = [...apiBookings, ...localBookings];
@@ -174,14 +173,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
     try {
       // Отменяем локально (без API)
       await _localBookingService.cancelBooking(booking.id);
-      
+
       // Если это локальная запись (отрицательный ID), удаляем её
       if (booking.id < 0) {
         await _localBookingService.deleteLocalBooking(booking.id);
       }
 
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Бронирование отменено'),
@@ -232,48 +231,48 @@ class _BookingsScreenState extends State<BookingsScreen> {
     return ConnectivityWrapper(
       onRetry: _loadBookings,
       child: Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Мои записи',
-          style: AppTextStyles.heading3.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Фильтры по статусу
-          _buildStatusFilters(),
-          
-          // Список бронирований
-          Expanded(
-            child: AnimatedStateSwitcher(
-              child: _isLoading
-                  ? _buildSkeletonLoader()
-                  : _error != null
-                      ? FadeInWidget(
-                          child: _buildErrorState(),
-                        )
-                      : _bookings.isEmpty
-                          ? FadeInWidget(
-                              child: _buildEmptyState(),
-                            )
-                          : _buildBookingsList(),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            'Мои записи',
+            style: AppTextStyles.heading3.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: AppBottomNav(
-          current: BottomNavItem.profile,
+          centerTitle: true,
         ),
-      ),
+        body: Column(
+          children: [
+            // Фильтры по статусу
+            _buildStatusFilters(),
+
+            // Список бронирований
+            Expanded(
+              child: AnimatedStateSwitcher(
+                child: _isLoading
+                    ? _buildSkeletonLoader()
+                    : _error != null
+                        ? FadeInWidget(
+                            child: _buildErrorState(),
+                          )
+                        : _bookings.isEmpty
+                            ? FadeInWidget(
+                                child: _buildEmptyState(),
+                              )
+                            : _buildBookingsList(),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: AppBottomNav(
+            current: BottomNavItem.profile,
+          ),
+        ),
       ),
     );
   }
@@ -310,7 +309,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 label: Text(status['label'] as String),
                 onSelected: (selected) {
                   setState(() {
-                    _selectedStatus = selected ? status['value'] as String? : null;
+                    _selectedStatus =
+                        selected ? status['value'] as String? : null;
                   });
                   _loadBookings();
                 },
@@ -372,7 +372,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
   Widget _buildBookingCard(Booking booking) {
     final dateFormat = DateFormat('dd MMMM yyyy', 'ru');
     final timeFormat = DateFormat('HH:mm', 'ru');
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -401,7 +401,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: _getStatusColor(booking.status).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -428,7 +429,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Мастер: ${booking.masterName}',
+                    'Спа-терапевт: ${booking.masterName}',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -438,7 +439,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
             ),
           ],
           const SizedBox(height: 12),
-          
+
           // Дата и время
           Row(
             children: [
@@ -469,9 +470,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ),
             ],
           ),
-          
+
           // Длительность и цена
-          if (booking.serviceDuration != null || booking.servicePrice != null) ...[
+          if (booking.serviceDuration != null ||
+              booking.servicePrice != null) ...[
             const SizedBox(height: 8),
             Row(
               children: [
@@ -489,7 +491,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                 ],
-                if (booking.serviceDuration != null && booking.servicePrice != null)
+                if (booking.serviceDuration != null &&
+                    booking.servicePrice != null)
                   const SizedBox(width: 16),
                 if (booking.servicePrice != null) ...[
                   Icon(
@@ -510,7 +513,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ],
             ),
           ],
-          
+
           // Индикатор записи из YClients
           if (booking.isFromYClients) ...[
             const SizedBox(height: 8),
@@ -532,9 +535,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ],
             ),
           ],
-          
+
           // Комментарий (скрываем техническую информацию YClients)
-          if (booking.notes != null && booking.notes!.isNotEmpty && !booking.isFromYClients) ...[
+          if (booking.notes != null &&
+              booking.notes!.isNotEmpty &&
+              !booking.isFromYClients) ...[
             const SizedBox(height: 8),
             Text(
               booking.notes!,
@@ -545,7 +550,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          
+
           // Кнопка отмены
           if (booking.canCancel) ...[
             const SizedBox(height: 12),
@@ -568,4 +573,3 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 }
-

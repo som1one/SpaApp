@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
@@ -16,15 +17,19 @@ class AuthService {
   bool _isAuthenticated = false;
   final _apiService = ApiService();
   final _storageService = StorageService();
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email'],
-  );
+  GoogleSignIn? _googleSignIn;
 
   bool get isAuthenticated => _isAuthenticated;
 
   String? get token => _token;
 
   FirebaseAuth get _firebaseAuth => FirebaseAuth.instance;
+
+  GoogleSignIn _getGoogleSignIn() {
+    return _googleSignIn ??= GoogleSignIn(
+      scopes: const ['email'],
+    );
+  }
 
   Future<bool> login(String email, String password) async {
     try {
@@ -118,8 +123,10 @@ class AuthService {
 
   Future<bool> signInWithGoogle() async {
     try {
+      final googleSignIn = _getGoogleSignIn();
+
       // Запускаем Google Sign-In
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
         // Пользователь отменил вход
@@ -180,7 +187,11 @@ class AuthService {
   }
 
   Future<void> signOutGoogle() async {
-    await _googleSignIn.signOut();
+    if (_googleSignIn != null) {
+      await _googleSignIn!.signOut();
+    } else if (kIsWeb) {
+      // На web не инициализируем GoogleSignIn без необходимости, чтобы не падать на старте.
+    }
     await _firebaseAuth.signOut();
     await logout();
   }

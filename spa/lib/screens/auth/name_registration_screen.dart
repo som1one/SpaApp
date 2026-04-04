@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../routes/route_names.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
-import '../../services/storage_service.dart';
 
 class NameRegistrationScreen extends StatefulWidget {
   final String email;
@@ -29,7 +27,6 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
-  DateTime? _selectedDate;
   bool _isLoading = false;
   final _apiService = ApiService();
   final _authService = AuthService();
@@ -61,38 +58,30 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
       });
 
       // Автоматический вход после регистрации
-      final loginSuccess = await _authService.login(widget.email, widget.password);
+      final loginSuccess =
+          await _authService.login(widget.email, widget.password);
       if (!mounted) return;
 
       if (loginSuccess) {
         await _userService.refreshUser();
         if (!mounted) return;
-        
-        // Сохраняем выбранную дату, если она была выбрана
-        if (_selectedDate != null) {
-          await StorageService().saveString(
-            'preferred_booking_date',
-            _selectedDate!.toIso8601String(),
-          );
-        }
-        
+
         // Переход на главную, минуя экран с кодом
         Navigator.of(context).pushNamedAndRemoveUntil(
           RouteNames.home,
           (route) => false,
         );
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: AppColors.white, size: 20),
+                const Icon(Icons.check_circle,
+                    color: AppColors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _selectedDate != null
-                        ? 'Регистрация завершена! Вы можете создать запись на выбранную дату'
-                        : 'Регистрация завершена',
+                    'Регистрация завершена',
                     style: const TextStyle(
                       fontFamily: 'Inter18',
                       fontWeight: FontWeight.w600,
@@ -108,14 +97,15 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             margin: const EdgeInsets.all(16),
-            duration: Duration(seconds: _selectedDate != null ? 4 : 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Не удалось автоматически войти. Попробуйте войти вручную.'),
+            content: Text(
+                'Не удалось автоматически войти. Попробуйте войти вручную.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -175,44 +165,6 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
       return 'Фамилия должна содержать не более 100 символов';
     }
     return null;
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final now = DateTime.now();
-    final firstDate = now;
-    final lastDate = now.add(const Duration(days: 365));
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? now.add(const Duration(days: 7)),
-      firstDate: firstDate,
-      lastDate: lastDate,
-      locale: const Locale('ru', 'RU'),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.buttonPrimary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: AppColors.textPrimary,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.buttonPrimary,
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
   }
 
   @override
@@ -454,133 +406,6 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.buttonPrimary.withOpacity(0.1),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.buttonPrimary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.calendar_today_outlined,
-                                color: AppColors.buttonPrimary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Желаемая дата записи',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      fontFamily: 'Inter24',
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Необязательно',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      fontFamily: 'Inter18',
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () => _selectDate(context),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFAFAFB),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: _selectedDate != null
-                                    ? AppColors.buttonPrimary.withOpacity(0.3)
-                                    : AppColors.buttonPrimary.withOpacity(0.2),
-                                width: _selectedDate != null ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.event_outlined,
-                                  color: _selectedDate != null
-                                      ? AppColors.buttonPrimary
-                                      : AppColors.textSecondary,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    _selectedDate != null
-                                        ? DateFormat('EEEE, d MMMM yyyy', 'ru').format(_selectedDate!)
-                                        : 'Выберите дату',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      fontFamily: 'Inter24',
-                                      fontSize: 16,
-                                      color: _selectedDate != null
-                                          ? AppColors.textPrimary
-                                          : const Color(0xFFB6BAC4),
-                                      fontWeight: _selectedDate != null ? FontWeight.w500 : FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                                if (_selectedDate != null)
-                                  IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
-                                    color: AppColors.textSecondary,
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedDate = null;
-                                      });
-                                    },
-                                  )
-                                else
-                                  Icon(
-                                    Icons.arrow_forward_ios,
-                                    size: 16,
-                                    color: AppColors.textSecondary.withOpacity(0.5),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 32),
                   Container(
                     decoration: BoxDecoration(
@@ -615,7 +440,8 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
                             : Row(
@@ -641,39 +467,6 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
                       ),
                     ),
                   ),
-                  if (_selectedDate != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.buttonPrimary.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.buttonPrimary.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: AppColors.buttonPrimary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'После регистрации вы сможете создать запись на выбранную дату',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                fontFamily: 'Inter18',
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -729,4 +522,3 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
     );
   }
 }
-

@@ -6,7 +6,6 @@ import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/validators.dart';
-import '../../utils/constants.dart';
 // import 'vk_auth_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -19,7 +18,6 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
   bool _isLoading = false;
   bool _isFormattingPhone = false;
   final _authService = AuthService();
@@ -48,15 +46,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void initState() {
     super.initState();
     _phoneController.addListener(_handlePhoneFormatting);
-    
+
     // Проверяем, авторизован ли пользователь после restoreSession
     // Используем addPostFrameCallback чтобы дать время restoreSession выполниться
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Даем время на выполнение restoreSession в фоне
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       if (!mounted) return;
-      
+
       // Проверяем аутентификацию
       if (_authService.isAuthenticated) {
         Navigator.of(context).pushReplacementNamed(RouteNames.home);
@@ -68,8 +66,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void dispose() {
     _phoneController.removeListener(_handlePhoneFormatting);
     _phoneController.dispose();
-    _emailController.dispose();
     super.dispose();
+  }
+
+  String _buildRegistrationEmail(String phone) {
+    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    return 'user_$digits@priroda.local';
   }
 
   Future<void> _handleContinue() async {
@@ -83,11 +85,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     try {
       final apiService = ApiService();
-      final email = _emailController.text.trim();
       final rawPhone = _phoneController.text.trim();
       final phone = rawPhone.isNotEmpty && !rawPhone.startsWith('+')
           ? '+$rawPhone'
           : rawPhone;
+      final email = _buildRegistrationEmail(phone);
 
       try {
         final queryParts = <String>[
@@ -95,8 +97,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           if (phone.isNotEmpty) 'phone=${Uri.encodeComponent(phone)}',
         ];
         final query = queryParts.join('&');
-        final checkResponse =
-            await apiService.get('/auth/check-email?$query');
+        final checkResponse = await apiService.get('/auth/check-email?$query');
         final userExists = checkResponse['exists'] == true;
 
         if (!mounted) return;
@@ -163,7 +164,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      
+
       setState(() {
         _isLoading = false;
       });
@@ -177,13 +178,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
-    // Future<void> _handleVkLogin() async {
+  // Future<void> _handleVkLogin() async {
   //   if (!mounted) return;
-  //   
+  //
   //   // VK App ID из констант
   //   final vkAppId = AppConstants.vkAppId;
   //   final redirectUri = AppConstants.vkRedirectUri;
-  //   
+  //
   //   if (vkAppId.isEmpty) {
   //     if (!mounted) return;
   //     ScaffoldMessenger.of(context).showSnackBar(
@@ -194,7 +195,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   //     );
   //     return;
   //   }
-  //   
+  //
   //   // Открываем экран авторизации VK
   //   await Navigator.of(context).push(
   //     MaterialPageRoute(
@@ -205,33 +206,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   //     ),
   //   );
   // }
-
-  Future<bool> _requestVerificationCode(
-    ApiService apiService,
-    String email,
-    String phone,
-  ) async {
-    setState(() => _isLoading = true);
-    try {
-      await apiService.post('/auth/request-code', {
-        'email': email,
-        'phone': phone,
-      });
-      if (!mounted) return false;
-      setState(() => _isLoading = false);
-      return true;
-    } catch (e) {
-      if (!mounted) return false;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Не удалось отправить код: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-  }
 
   Future<String?> _showPasswordDialog({
     required String title,
@@ -292,21 +266,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.inputBorder),
+                          borderSide:
+                              const BorderSide(color: AppColors.inputBorder),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.inputBorder),
+                          borderSide:
+                              const BorderSide(color: AppColors.inputBorder),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.buttonPrimary),
+                          borderSide:
+                              const BorderSide(color: AppColors.buttonPrimary),
                         ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            showPassword ? Icons.visibility : Icons.visibility_off,
+                            showPassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                             color: AppColors.textSecondary,
                           ),
                           onPressed: () => setState(() {
@@ -331,21 +310,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: AppColors.inputBorder),
+                            borderSide:
+                                const BorderSide(color: AppColors.inputBorder),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: AppColors.inputBorder),
+                            borderSide:
+                                const BorderSide(color: AppColors.inputBorder),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: AppColors.buttonPrimary),
+                            borderSide: const BorderSide(
+                                color: AppColors.buttonPrimary),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              showConfirm ? Icons.visibility : Icons.visibility_off,
+                              showConfirm
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: AppColors.textSecondary,
                             ),
                             onPressed: () => setState(() {
@@ -510,30 +494,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         keyboardType: TextInputType.phone,
                         validator: Validators.validatePhone,
                       ),
-                      const SizedBox(height: 22),
-                      const _SectionLabel(text: 'Адрес электронной почты'),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _emailController,
-                        style: const TextStyle(
-                          fontFamily: 'Inter24',
-                          fontSize: 16,
-                          height: 26 / 16,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textPrimary,
-                        ),
-                        decoration: inputDecoration.copyWith(
-                          hintText: 'Введите адрес электронной почты',
-                          prefixIcon: _InputIcon(
-                            svgAsset: 'assets/images/Registration/mail.svg',
-                            fallback: Icons.email_outlined,
-                            color: const Color(0xFF9095A1),
-                          ),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: Validators.validateEmail,
-                        autocorrect: false,
-                      ),
                       const SizedBox(height: 32),
                       SizedBox(
                         height: 58,
@@ -553,7 +513,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 )
                               : Text(
@@ -617,7 +578,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       const SizedBox(height: 24),
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pushReplacementNamed(RouteNames.home);
+                          Navigator.of(context)
+                              .pushReplacementNamed(RouteNames.home);
                         },
                         child: Text(
                           'Продолжить как гость',
@@ -741,5 +703,3 @@ class _SocialButton extends StatelessWidget {
     );
   }
 }
-
-

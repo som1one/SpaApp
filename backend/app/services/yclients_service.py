@@ -1264,6 +1264,50 @@ class YClientsService:
             payload = response.json()
             return payload.get("data")
 
+    @staticmethod
+    def _extract_loyalty_level_title(client_data: Optional[Dict[str, Any]]) -> Optional[str]:
+        if not client_data:
+            return None
+
+        categories = client_data.get("categories") or []
+        titles = [
+            str(category.get("title")).strip()
+            for category in categories
+            if isinstance(category, dict) and category.get("title")
+        ]
+        if titles:
+            return ", ".join(titles)
+
+        discount = client_data.get("discount")
+        if isinstance(discount, (int, float)) and discount > 0:
+            return f"{int(discount)}%"
+
+        return None
+
+    def get_client_snapshot(
+        self,
+        phone: Optional[str] = None,
+        email: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Получить краткий срез клиентских данных из YClients для админки."""
+        client_data = self.find_client(phone=phone, email=email)
+        if not client_data:
+            return None
+
+        return {
+            "client_id": client_data.get("id"),
+            "phone": client_data.get("phone"),
+            "balance": client_data.get("balance"),
+            "spent": client_data.get("spent"),
+            "discount": client_data.get("discount"),
+            "loyalty_level_title": self._extract_loyalty_level_title(client_data),
+            "categories": [
+                str(category.get("title")).strip()
+                for category in (client_data.get("categories") or [])
+                if isinstance(category, dict) and category.get("title")
+            ],
+        }
+
     def update_client_bonus_field(self, client_id: int, field_id: str, balance: int) -> bool:
         """Обновить кастомное поле клиента текущим бонусным балансом."""
         client_data = self.get_client(client_id)

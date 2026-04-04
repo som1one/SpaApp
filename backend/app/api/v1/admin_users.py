@@ -8,10 +8,12 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.apis.dependencies import admin_required
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.admin_users import AdminUserResponse, AdminUsersListResponse
+from app.schemas.admin_users import AdminUserResponse, AdminUsersListResponse, AdminUserYClientsResponse
+from app.services.yclients_service import yclients_service
 
 router = APIRouter(prefix="/admin/users", tags=["Admin Users"])
 logger = logging.getLogger(__name__)
@@ -194,4 +196,61 @@ async def export_users_excel(
         file_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{user_id}/yclients", response_model=AdminUserYClientsResponse)
+async def get_user_yclients_snapshot(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: dict = Depends(admin_required),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    if not settings.YCLIENTS_ENABLED:
+        return AdminUserYClientsResponse(
+            found=False,
+            message="YClients интеграция выключена",
+        )
+
+    if not settings.YCLIENTS_COMPANY_ID or not settings.YCLIENTS_API_TOKEN or not settings.YCLIENTS_USER_TOKEN:
+        return AdminUserYClientsResponse(
+            found=False,
+            message="YClients не настроен",
+        )
+
+    try:
+        yclients_service.configure(
+            company_id=settings.YCLIENTS_COMPANY_ID,
+            api_token=settings.YCLIENTS_API_TOKEN,
+            user_token=settings.YCLIENTS_USER_TOKEN,
+        )
+        snapshot = yclients_service.get_client_snapshot(
+            phone=user.phone,
+            email=user.email,
+        )
+    except Exception as exc:
+        logger.error("Ошибка загрузки данных пользователя из YClients: %s", exc, exc_info=True)
+        return AdminUserYClientsResponse(
+            found=False,
+            message="Не удалось получить данные из YClients",
+        )
+
+    if not snapshot:
+        return AdminUserYClientsResponse(
+            found=False,
+            message="Клиент в YClients не найден",
+        )
+
+    return AdminUserYClientsResponse(
+        found=True,
+        client_id=snapshot.get("client_id"),
+        phone=snapshot.get("phone"),
+        balance=snapshot.get("balance"),
+        spent=snapshot.get("spent"),
+        discount=snapshot.get("discount"),
+        loyalty_level_title=snapshot.get("loyalty_level_title"),
+        categories=snapshot.get("categories") or [],
     )

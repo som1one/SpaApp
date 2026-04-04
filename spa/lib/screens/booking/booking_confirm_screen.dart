@@ -101,7 +101,8 @@ class _BookingConfirmScreenState extends State<BookingConfirmScreen> {
           _buildDetailRow(
               Icons.spa_outlined, 'Услуга', widget.service?.name ?? 'Услуга'),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.person_outline, 'Мастер', widget.staffName),
+          _buildDetailRow(
+              Icons.person_outline, 'Спа-терапевт', widget.staffName),
           const SizedBox(height: 12),
           _buildDetailRow(Icons.calendar_today_outlined, 'Дата', dateStr),
           const SizedBox(height: 12),

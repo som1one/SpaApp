@@ -19,7 +19,7 @@ import {
 import { useAuth } from '../context/useAuth';
 import dayjs from '../utils/dayjs';
 import { useEffect, useMemo, useState } from 'react';
-import { exportUsersExcel, fetchUsers } from '../api/users';
+import { exportUsersExcel, fetchUserYclientsSnapshot, fetchUsers } from '../api/users';
 import { fetchBookings } from '../api/bookings';
 import { useDebounce } from '../hooks/useDebounce';
 import { adjustUserLoyalty } from '../api/loyalty';
@@ -38,6 +38,8 @@ const UsersPage = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userBookings, setUserBookings] = useState([]);
   const [userBookingsLoading, setUserBookingsLoading] = useState(false);
+  const [yclientsData, setYclientsData] = useState(null);
+  const [yclientsLoading, setYclientsLoading] = useState(false);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [adjustLoading, setAdjustLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
@@ -198,12 +200,25 @@ const UsersPage = () => {
 
   const openUserDrawer = (record) => {
     setSelectedUser(record);
+    setYclientsData(null);
     loadUserBookings(record.id);
+    (async () => {
+      try {
+        setYclientsLoading(true);
+        const response = await fetchUserYclientsSnapshot(record.id);
+        setYclientsData(response);
+      } catch {
+        setYclientsData({ found: false, message: 'Не удалось загрузить данные YClients' });
+      } finally {
+        setYclientsLoading(false);
+      }
+    })();
   };
 
   const closeUserDrawer = () => {
     setSelectedUser(null);
     setUserBookings([]);
+    setYclientsData(null);
     setAdjustModalOpen(false);
   };
 
@@ -339,6 +354,41 @@ const UsersPage = () => {
                 {dayjs(selectedUser.created_at).tz('Europe/Moscow').format('DD.MM.YYYY HH:mm')}
               </Descriptions.Item>
             </Descriptions>
+
+            <Typography.Title level={5} style={{ marginTop: 24 }}>
+              YClients
+            </Typography.Title>
+            {yclientsLoading ? (
+              <Skeleton active paragraph={{ rows: 4 }} title={false} />
+            ) : (
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="Телефон в YClients">
+                  {yclientsData?.found ? (yclientsData.phone || '—') : '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Потрачено в YClients">
+                  {yclientsData?.found && yclientsData.spent !== null && yclientsData.spent !== undefined
+                    ? `${yclientsData.spent}`
+                    : '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Баланс в YClients">
+                  {yclientsData?.found && yclientsData.balance !== null && yclientsData.balance !== undefined
+                    ? `${yclientsData.balance}`
+                    : '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Уровень лояльности в YClients">
+                  {yclientsData?.found
+                    ? (yclientsData.loyalty_level_title || '—')
+                    : '—'}
+                </Descriptions.Item>
+                {!yclientsLoading && yclientsData?.message && (
+                  <Descriptions.Item label="Статус YClients">
+                    <Tag color={yclientsData.found ? 'green' : 'default'}>
+                      {yclientsData.message}
+                    </Tag>
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            )}
 
             <Space direction="vertical" style={{ marginTop: 16, width: '100%' }}>
               <Button type="primary" onClick={() => setAdjustModalOpen(true)} block>

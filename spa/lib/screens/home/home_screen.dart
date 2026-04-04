@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ];
 
     if (details.masterName != null && details.masterName!.isNotEmpty) {
-      parts.add('Мастер: ${details.masterName}');
+      parts.add('Спа-терапевт: ${details.masterName}');
     }
 
     return parts.join(' • ');
@@ -442,37 +442,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   top: 0,
                   bottom: 0,
                   child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SvgPicture.asset(
-                          'assets/images/Home/sheet.svg',
-                          width: 24,
-                          height: 24,
-                          colorFilter: const ColorFilter.mode(
-                            AppColors.textPrimary,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'PRIRODA SPA',
-                          style: AppTextStyles.heading3.copyWith(
-                            fontFamily: 'Inter24',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 19,
-                            letterSpacing: 0.5,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Главная',
+                      style: AppTextStyles.heading3.copyWith(
+                        fontFamily: 'Inter24',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 19,
+                        letterSpacing: 0.2,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          // Аккуратный разделитель под PRIRODA SPA
+          // Аккуратный разделитель под заголовком
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 28),
             height: 1,
@@ -754,7 +739,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Специальные предложения',
+            'Ваше спа-путешествие начинается здесь',
             style: AppTextStyles.heading3.copyWith(
               fontFamily: 'Inter24',
               fontSize: 20,

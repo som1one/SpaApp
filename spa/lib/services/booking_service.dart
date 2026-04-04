@@ -8,7 +8,7 @@ class BookingService {
   final _apiService = ApiService();
   final _authService = AuthService();
 
-  /// Получить список доступных мастеров для услуги
+  /// Получить список доступных спа-терапевтов для услуги
   Future<List<StaffMember>> getAvailableStaff(int serviceId) async {
     final token = _authService.token;
     if (token != null) {

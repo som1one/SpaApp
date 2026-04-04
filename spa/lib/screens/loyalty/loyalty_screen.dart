@@ -355,7 +355,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
               // Линия с делениями + карточки уровней (без "съезжания" на маленьких экранах)
               Builder(
                 builder: (context) {
-                  const levelTileWidth = 120.0;
+                  const levelTileWidth = 128.0;
                   final currentLevelName = info.currentLevel?.name ?? '0';
                   final currentLevelIndex = levels.indexWhere((l) {
                     final levelTitle =
@@ -378,7 +378,16 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                             return SizedBox(
                               width: levelTileWidth,
                               child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
+                                  Expanded(
+                                    child: index == 0
+                                        ? const SizedBox.shrink()
+                                        : Container(
+                                            height: 2,
+                                            color: AppColors.borderLight,
+                                          ),
+                                  ),
                                   Container(
                                     width: isCurrent ? 12 : 10,
                                     height: isCurrent ? 12 : 10,
@@ -395,13 +404,14 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                                             ),
                                     ),
                                   ),
-                                  if (!isLast)
-                                    Expanded(
-                                      child: Container(
-                                        height: 2,
-                                        color: AppColors.borderLight,
-                                      ),
-                                    ),
+                                  Expanded(
+                                    child: isLast
+                                        ? const SizedBox.shrink()
+                                        : Container(
+                                            height: 2,
+                                            color: AppColors.borderLight,
+                                          ),
+                                  ),
                                 ],
                               ),
                             );
@@ -417,12 +427,15 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    level.title,
-                                    textAlign: TextAlign.center,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w600,
+                                  SizedBox(
+                                    height: 20,
+                                    child: Text(
+                                      level.title,
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 6),
@@ -464,12 +477,15 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 6),
-                                  Text(
-                                    'Потратить сумму от ${_formatRub(level.threshold)}',
-                                    textAlign: TextAlign.center,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 11,
+                                  SizedBox(
+                                    height: 32,
+                                    child: Text(
+                                      'Потратить от ${_formatRub(level.threshold)}',
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 11,
+                                      ),
                                     ),
                                   ),
                                 ],

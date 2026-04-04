@@ -27,3 +27,15 @@ class AdminUserResponse(BaseModel):
 class AdminUsersListResponse(BaseModel):
     items: List[AdminUserResponse]
     total: int
+
+
+class AdminUserYClientsResponse(BaseModel):
+    found: bool = False
+    client_id: Optional[int] = None
+    phone: Optional[str] = None
+    balance: Optional[int] = None
+    spent: Optional[int] = None
+    discount: Optional[int] = None
+    loyalty_level_title: Optional[str] = None
+    categories: List[str] = []
+    message: Optional[str] = None

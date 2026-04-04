@@ -1,4 +1,4 @@
-/// Модель мастера из YClients
+/// Модель спа-терапевта из YClients
 class StaffMember {
   final int id;
   final String name;
@@ -17,10 +17,11 @@ class StaffMember {
   factory StaffMember.fromJson(Map<String, dynamic> json) {
     return StaffMember(
       id: json['id'] as int,
-      name: json['name'] as String? ?? 'Мастер',
+      name: json['name'] as String? ?? 'Спа-терапевт',
       specialization: json['specialization'] as String?,
       avatar: json['avatar'] as String?,
-      rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
+      rating:
+          json['rating'] != null ? (json['rating'] as num).toDouble() : null,
     );
   }
 
@@ -34,4 +35,3 @@ class StaffMember {
     };
   }
 }
-

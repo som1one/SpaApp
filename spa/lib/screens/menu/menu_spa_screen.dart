@@ -480,7 +480,7 @@ class _MenuSpaScreenState extends State<MenuSpaScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Выберите услугу, мастера и удобное время в форме записи',
+                          'Выберите услугу, спа-терапевта и удобное время в форме записи',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.white.withOpacity(0.7),
                             fontSize: 12,

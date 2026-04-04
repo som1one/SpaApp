@@ -1270,7 +1270,7 @@ class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
-                                        'Мастер: ${booking.masterName}',
+                                        'Спа-терапевт: ${booking.masterName}',
                                         style: AppTextStyles.bodySmall.copyWith(
                                           color: AppColors.textSecondary,
                                         ),
