@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -65,7 +64,7 @@ class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Text(
-            'Спа-терапия',
+            'Эксклюзивные предложения',
             style: AppTextStyles.heading3.copyWith(
               fontFamily: 'Inter24',
               fontSize: 20,
@@ -150,54 +149,34 @@ class _JourneyCard extends StatelessWidget {
 
   const _JourneyCard({required this.data});
 
-  Future<void> _openUrl(String? url) async {
-    if (url == null || url.isEmpty) return;
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isNetworkImage = data.imageUrl != null && data.imageUrl!.isNotEmpty;
     return RepaintBoundary(
-      child: GestureDetector(
-        onTap: () => _openUrl(data.url),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (isNetworkImage)
-                  CachedNetworkImage(
-                    imageUrl: data.imageUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      color: AppColors.buttonPrimary.withOpacity(0.08),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: AppColors.buttonPrimary.withOpacity(0.08),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.black.withOpacity(0.25),
-                      ),
-                    ),
-                  )
-                else
-                  Container(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (isNetworkImage)
+                CachedNetworkImage(
+                  imageUrl: data.imageUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    color: AppColors.buttonPrimary.withOpacity(0.08),
+                  ),
+                  errorWidget: (_, __, ___) => Container(
                     color: AppColors.buttonPrimary.withOpacity(0.08),
                     alignment: Alignment.center,
                     child: Icon(
@@ -205,51 +184,60 @@ class _JourneyCard extends StatelessWidget {
                       color: Colors.black.withOpacity(0.25),
                     ),
                   ),
+                )
+              else
                 Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0),
-                        Colors.black.withOpacity(0.65),
-                      ],
-                    ),
+                  color: AppColors.buttonPrimary.withOpacity(0.08),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    color: Colors.black.withOpacity(0.25),
                   ),
                 ),
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: 24,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data.title,
-                        style: AppTextStyles.heading3.copyWith(
-                          fontFamily: 'Inter24',
-                          fontSize: 22,
-                          height: 28 / 22,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        data.subtitle,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontFamily: 'Inter18',
-                          fontSize: 14,
-                          height: 20 / 14,
-                          color: Colors.white.withOpacity(0.85),
-                        ),
-                      ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0),
+                      Colors.black.withOpacity(0.65),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 24,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: AppTextStyles.heading3.copyWith(
+                        fontFamily: 'Inter24',
+                        fontSize: 22,
+                        height: 28 / 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      data.subtitle,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontFamily: 'Inter18',
+                        fontSize: 14,
+                        height: 20 / 14,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
